@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore"; // ফায়ারস্টোর ডাটাবেজ ইমপোর্ট করা হলো
 import { getAuth } from "firebase/auth"; // অথেনটিকেশন ইমপোর্ট করা হলো
 
@@ -17,11 +17,24 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+export let analytics: unknown = null;
+if (typeof window !== 'undefined') {
+  isSupported().then((supported) => {
+    if (supported) {
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        console.warn('Analytics initialization skipped:', e);
+      }
+    }
+  }).catch(() => {});
+}
 
 // Initialize Cloud Firestore and Auth, then export them for global use
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 export default app;
+
 
