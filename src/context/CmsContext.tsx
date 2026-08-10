@@ -486,58 +486,90 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!db) return;
 
     const unsubInbox = onSnapshot(collection(db, 'inbox'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setInboxItems([]);
+        try { localStorage.setItem('spy_cms_inbox', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as InboxItem[];
-        setInboxItems(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setInboxItems(items);
+        try { localStorage.setItem('spy_cms_inbox', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore inbox listener notice:', err));
 
     const unsubComplaints = onSnapshot(collection(db, 'complaints'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setComplaints([]);
+        try { localStorage.setItem('spy_cms_complaints', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ComplaintItem[];
-        setComplaints(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setComplaints(items);
+        try { localStorage.setItem('spy_cms_complaints', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore complaints listener notice:', err));
 
     const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setEvents([]);
+        try { localStorage.setItem('spy_cms_events', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventItem[];
-        setEvents(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setEvents(items);
+        try { localStorage.setItem('spy_cms_events', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore events listener notice:', err));
 
     const unsubAttendees = onSnapshot(collection(db, 'event_attendees'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setEventAttendees([]);
+        try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventAttendee[];
-        setEventAttendees(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setEventAttendees(items);
+        try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore attendees listener notice:', err));
 
     const unsubTeam = onSnapshot(collection(db, 'team'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setTeamMembers([]);
+        try { localStorage.setItem('spy_cms_team', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as TeamMember[];
-        setTeamMembers(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setTeamMembers(items);
+        try { localStorage.setItem('spy_cms_team', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore team listener notice:', err));
 
     const unsubPartners = onSnapshot(collection(db, 'partners'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setPartners([]);
+        try { localStorage.setItem('spy_cms_partners', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as PartnerLogo[];
         setPartners(Array.from(new Map(items.map((it) => [it.name, it])).values()));
+        try { localStorage.setItem('spy_cms_partners', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore partners listener notice:', err));
 
     const unsubPrograms = onSnapshot(collection(db, 'programs'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setPrograms([]);
+        try { localStorage.setItem('spy_cms_programs', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ProgramItem[];
-        setPrograms(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setPrograms(items);
+        try { localStorage.setItem('spy_cms_programs', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore programs listener notice:', err));
 
     const unsubImpact = onSnapshot(collection(db, 'impact_stories'), (snapshot) => {
-      if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setImpactStories([]);
+        try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify([])); } catch (e) {}
+      } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ImpactStory[];
-        setImpactStories(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        setImpactStories(items);
+        try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify(items)); } catch (e) {}
       }
     }, (err) => console.warn('Firestore impact_stories listener notice:', err));
 
@@ -1002,7 +1034,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEvent = async (id: string) => {
-    setEvents((prev) => prev.filter((item) => item.id !== id));
+    setEvents((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try { localStorage.setItem('spy_cms_events', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'events', id));
@@ -1042,7 +1078,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEventAttendee = async (id: string) => {
-    setEventAttendees((prev) => prev.filter((a) => a.id !== id));
+    setEventAttendees((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'event_attendees', id));
@@ -1088,7 +1128,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteProgram = async (id: string) => {
-    setPrograms((prev) => prev.filter((item) => item.id !== id));
+    setPrograms((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try { localStorage.setItem('spy_cms_programs', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'programs', id));
@@ -1126,7 +1170,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTeamMember = async (id: string) => {
-    setTeamMembers((prev) => prev.filter((item) => item.id !== id));
+    setTeamMembers((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try { localStorage.setItem('spy_cms_team', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'team', id));
@@ -1166,7 +1214,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePartner = async (name: string) => {
-    setPartners((prev) => prev.filter((p) => p.name !== name));
+    setPartners((prev) => {
+      const updated = prev.filter((p) => p.name !== name);
+      try { localStorage.setItem('spy_cms_partners', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         const partnerId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -1225,7 +1277,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteComplaint = async (id: string) => {
-    setComplaints((prev) => prev.filter((c) => c.id !== id));
+    setComplaints((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      try { localStorage.setItem('spy_cms_complaints', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'complaints', id));
@@ -1288,7 +1344,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteInboxItem = async (id: string) => {
-    setInboxItems((prev) => prev.filter((item) => item.id !== id));
+    setInboxItems((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try { localStorage.setItem('spy_cms_inbox', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'inbox', id));
@@ -1326,7 +1386,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteImpactStory = async (id: string) => {
-    setImpactStories((prev) => prev.filter((item) => item.id !== id));
+    setImpactStories((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
     if (db) {
       try {
         await deleteDoc(doc(db, 'impact_stories', id));
