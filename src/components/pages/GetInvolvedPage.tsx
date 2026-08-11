@@ -52,7 +52,7 @@ export const GetInvolvedPage: React.FC<GetInvolvedPageProps> = ({ onOpenInvolvem
     <div className="space-y-16 pb-16">
       {/* Page Header */}
       <section className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white py-16 rounded-b-3xl shadow-lg relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-4 relative z-10">
+        <div className="max-w-5xl mx-auto px-4 text-center space-y-4 relative z-10">
           <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-800/80 px-3.5 py-1 rounded-full border border-purple-600">
             TAKE ACTION
           </span>

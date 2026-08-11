@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { doc, setDoc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useCms } from '../../context/CmsContext';
 import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole } from '../../types';
@@ -49,6 +50,10 @@ import {
   UserPlus,
   LogIn,
   User,
+  Bell,
+  BellRing,
+  Volume2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -230,6 +235,179 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
   >('overview');
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mainContainerRef = useRef<HTMLElement>(null);
+
+  // Scroll content area to top when activeTab changes
+  useEffect(() => {
+    if (mainContainerRef.current) {
+      mainContainerRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [activeTab]);
+
+  // Real-Time Notification & Browser Notification API state
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
+  const [liveToast, setLiveToast] = useState<{
+    id: string;
+    title: string;
+    body: string;
+    type: 'complaint' | 'inbox';
+    time: string;
+  } | null>(null);
+
+  const isInitialComplaints = useRef(true);
+  const isInitialInbox = useRef(true);
+  const isInitialMessages = useRef(true);
+
+  const requestNotificationPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const perm = await Notification.requestPermission();
+        setNotificationPermission(perm);
+        if (perm === 'granted') {
+          new Notification("Survivor's Path Youth CMS", {
+            body: 'Real-time browser notifications are now active! You will receive instant alerts for new complaints and messages.',
+            icon: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=120&q=80',
+          });
+        }
+      } catch (e) {
+        console.warn('Error asking for notification permission:', e);
+      }
+    } else {
+      alert('Browser Notification API is not supported in this browser environment.');
+    }
+  };
+
+  // FIRESTORE TRIGGER: Listen via onSnapshot to "complaints", "inbox", and "messages" collections
+  useEffect(() => {
+    if (!db || !currentUser || (!isAdmin && currentUser.role !== 'admin')) return;
+
+    // 1. Complaints Collection Real-time Trigger
+    const unsubComplaints = onSnapshot(
+      collection(db, 'complaints'),
+      (snapshot) => {
+        if (isInitialComplaints.current) {
+          isInitialComplaints.current = false;
+          return;
+        }
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data() as Partial<ComplaintItem>;
+            const alertTitle = `🚨 New Complaint Received (${data.category || 'Anonymous'})`;
+            const alertBody = data.subject || data.description?.slice(0, 90) || 'A new confidential complaint has been logged in the system.';
+
+            // Browser Notification API
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(alertTitle, {
+                  body: alertBody,
+                  tag: `complaint-${change.doc.id}`,
+                });
+              } catch (e) {
+                console.warn('Browser notification popup error:', e);
+              }
+            }
+
+            // In-app Notification Banner
+            setLiveToast({
+              id: change.doc.id,
+              title: alertTitle,
+              body: alertBody,
+              type: 'complaint',
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
+        });
+      },
+      (err) => console.warn('Real-time complaints trigger notice:', err)
+    );
+
+    // 2. Inbox Collection Real-time Trigger
+    const unsubInbox = onSnapshot(
+      collection(db, 'inbox'),
+      (snapshot) => {
+        if (isInitialInbox.current) {
+          isInitialInbox.current = false;
+          return;
+        }
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data() as Partial<InboxItem>;
+            const alertTitle = `📥 New Message from ${data.name || 'Visitor'}`;
+            const alertBody = data.subjectOrRole || data.message?.slice(0, 90) || 'A new inquiry was received in the CMS inbox.';
+
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(alertTitle, {
+                  body: alertBody,
+                  tag: `inbox-${change.doc.id}`,
+                });
+              } catch (e) {
+                console.warn('Browser notification popup error:', e);
+              }
+            }
+
+            setLiveToast({
+              id: change.doc.id,
+              title: alertTitle,
+              body: alertBody,
+              type: 'inbox',
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
+        });
+      },
+      (err) => console.warn('Real-time inbox trigger notice:', err)
+    );
+
+    // 3. Messages Collection Real-time Trigger
+    const unsubMessages = onSnapshot(
+      collection(db, 'messages'),
+      (snapshot) => {
+        if (isInitialMessages.current) {
+          isInitialMessages.current = false;
+          return;
+        }
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data() as any;
+            const alertTitle = `💬 New Message Received`;
+            const alertBody = data.subject || data.message || data.text || 'A new direct message document was logged.';
+
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification(alertTitle, {
+                  body: alertBody,
+                  tag: `messages-${change.doc.id}`,
+                });
+              } catch (e) {
+                console.warn('Browser notification popup error:', e);
+              }
+            }
+
+            setLiveToast({
+              id: change.doc.id,
+              title: alertTitle,
+              body: alertBody,
+              type: 'inbox',
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
+        });
+      },
+      (err) => console.warn('Real-time messages trigger notice:', err)
+    );
+
+    return () => {
+      unsubComplaints();
+      unsubInbox();
+      unsubMessages();
+    };
+  }, [currentUser, isAdmin]);
 
   // Modals & Forms State
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -686,27 +864,27 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col font-sans text-gray-900">
+    <div className="h-screen h-[100dvh] bg-gray-100 flex flex-col font-sans text-gray-900 overflow-hidden">
       {/* Top Admin Bar */}
-      <header className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white px-4 sm:px-6 py-3.5 flex items-center justify-between border-b border-purple-800/60 sticky top-0 z-30 shadow-md">
-        <div className="flex items-center gap-3">
+      <header className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white px-3 sm:px-6 py-2 sm:py-3.5 flex items-center justify-between border-b border-purple-800/60 shrink-0 z-30 shadow-md">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 rounded-lg bg-purple-800/80 text-purple-200 hover:text-white"
+            className="lg:hidden p-1.5 rounded-lg bg-purple-800/80 text-purple-200 hover:text-white shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-800 border border-purple-600 flex items-center justify-center text-white font-bold shadow-xs">
-              <ShieldCheck className="w-5 h-5 text-purple-300" />
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-800 border border-purple-600 flex items-center justify-center text-white font-bold shadow-xs shrink-0">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-purple-300" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-sm uppercase tracking-wider font-display">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-black text-xs sm:text-sm uppercase tracking-wider font-display truncate">
                   SURVIVOR’S PATH YOUTH
                 </span>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-purple-800 text-purple-200 border border-purple-600">
-                  CMS v2.6
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-purple-800 text-purple-200 border border-purple-600 shrink-0">
+                  CMS
                 </span>
               </div>
               <p className="text-xs text-purple-200/80 hidden sm:block">
@@ -717,6 +895,28 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Notification Permission Toggle Button */}
+          <button
+            onClick={requestNotificationPermission}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              notificationPermission === 'granted'
+                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
+                : notificationPermission === 'denied'
+                ? 'bg-amber-950/60 border-amber-500/40 text-amber-300 hover:bg-amber-900/60'
+                : 'bg-purple-900/80 border-purple-500/50 text-purple-200 hover:bg-purple-800 animate-pulse'
+            }`}
+            title={
+              notificationPermission === 'granted'
+                ? 'Real-time Browser Desktop Notifications active!'
+                : 'Click to enable real-time browser notifications for incoming complaints and inbox messages'
+            }
+          >
+            <BellRing className={`w-3.5 h-3.5 ${notificationPermission === 'granted' ? 'text-emerald-400' : 'text-purple-300'}`} />
+            <span className="hidden lg:inline">
+              {notificationPermission === 'granted' ? 'Alerts Active' : notificationPermission === 'denied' ? 'Alerts Muted' : 'Enable Live Alerts'}
+            </span>
+          </button>
+
           <button
             onClick={() => setActivePage('home')}
             className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-purple-400/30 text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer"
@@ -740,8 +940,63 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
         </div>
       </header>
 
+      {/* Real-time Incoming Live Notification Banner Toast */}
+      <AnimatePresence>
+        {liveToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-20 right-4 sm:right-8 z-50 max-w-sm w-full bg-purple-950 text-white rounded-2xl p-4 shadow-2xl border-2 border-purple-400 flex items-start gap-3"
+          >
+            <div
+              className={`p-2.5 rounded-xl shrink-0 ${
+                liveToast.type === 'complaint'
+                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                  : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+              }`}
+            >
+              {liveToast.type === 'complaint' ? (
+                <ShieldAlert className="w-5 h-5 text-rose-400 animate-bounce" />
+              ) : (
+                <Inbox className="w-5 h-5 text-purple-300 animate-pulse" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-xs font-black uppercase text-purple-100 truncate">{liveToast.title}</h4>
+                <span className="text-[10px] text-purple-300 font-mono">{liveToast.time}</span>
+              </div>
+              <p className="text-xs text-purple-200 mt-1 line-clamp-2">{liveToast.body}</p>
+              <div className="mt-2.5 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveTab(liveToast.type === 'complaint' ? 'complaints' : 'inbox');
+                    setLiveToast(null);
+                  }}
+                  className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10px] uppercase tracking-wider cursor-pointer transition-colors shadow-sm"
+                >
+                  Open {liveToast.type === 'complaint' ? 'Complaint Box' : 'Inbox'}
+                </button>
+                <button
+                  onClick={() => setLiveToast(null)}
+                  className="px-2 py-1 rounded-lg bg-purple-900/80 hover:bg-purple-800 text-purple-300 font-bold text-[10px] uppercase cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+
+            <button onClick={() => setLiveToast(null)} className="text-purple-400 hover:text-white p-0.5 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Main Panel Layout */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div
@@ -752,19 +1007,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
         {/* Left Fixed Sidebar */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-purple-950 text-purple-100 flex flex-col transition-transform duration-300 transform ${
+          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-purple-950 text-purple-100 flex flex-col transition-transform duration-300 transform ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          } border-r border-purple-900/80 shadow-xl`}
+          } border-r border-purple-900/80 shadow-xl overflow-hidden`}
         >
           {/* Mobile close button */}
-          <div className="lg:hidden p-4 flex justify-between items-center border-b border-purple-900">
+          <div className="lg:hidden p-4 flex justify-between items-center border-b border-purple-900 shrink-0">
             <span className="text-xs font-bold uppercase text-purple-300">Admin Navigation</span>
             <button onClick={() => setSidebarOpen(false)} className="p-1 text-purple-300">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="p-4 border-b border-purple-900/60">
+          <div className="p-4 border-b border-purple-900/60 shrink-0">
             <div className="bg-purple-900/50 rounded-2xl p-3 border border-purple-800/80 flex items-center gap-3">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <div>
@@ -775,7 +1030,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
           </div>
 
           {/* Navigation Menu Links */}
-          <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
+          <nav className="p-3 space-y-1 flex-1 min-h-0 overflow-y-auto">
             <button
               onClick={() => {
                 setActiveTab('overview');
@@ -886,9 +1141,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <span>Inbox & Requests</span>
               </div>
               {newInboxCount > 0 ? (
-                <span className="text-[10px] bg-purple-500 text-white font-black px-2 py-0.5 rounded-full">
-                  {newInboxCount}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-400"></span>
+                  </span>
+                  <span className="text-[10px] bg-purple-500 text-white font-black px-2 py-0.5 rounded-full shadow-xs">
+                    {newInboxCount} New
+                  </span>
+                </div>
               ) : (
                 <span className="text-[10px] bg-purple-900/80 text-purple-300 px-2 py-0.5 rounded-md font-bold">
                   {inboxItems.length}
@@ -911,9 +1172,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <ShieldAlert className="w-4 h-4 text-amber-300" />
                 <span>Complaint Box</span>
               </div>
-              {pendingComplaintsCount > 0 && (
-                <span className="text-[10px] bg-amber-500 text-purple-950 font-black px-2 py-0.5 rounded-full animate-bounce">
-                  {pendingComplaintsCount}
+              {pendingComplaintsCount > 0 ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] bg-rose-600 text-white font-black px-2 py-0.5 rounded-full shadow-xs">
+                    {pendingComplaintsCount} Pending
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[10px] bg-purple-900/80 text-purple-300 px-2 py-0.5 rounded-md font-bold">
+                  {complaints.length}
                 </span>
               )}
             </button>
@@ -976,7 +1247,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
           </nav>
 
           {/* Bottom Backup & Logout Action */}
-          <div className="p-4 border-t border-purple-900/80 space-y-2">
+          <div className="p-4 border-t border-purple-900/80 space-y-2 shrink-0">
             <button
               onClick={handleExportData}
               className="w-full px-3 py-2 rounded-xl bg-purple-900/70 hover:bg-purple-900 text-purple-200 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer border border-purple-800"
@@ -1004,8 +1275,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
         </aside>
 
         {/* Right Content Area */}
-        <main className="flex-1 bg-gray-50 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-8">
-          {/* MODULE 1: DASHBOARD OVERVIEW */}
+        <main ref={mainContainerRef} className="flex-1 min-h-0 bg-gray-50 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="space-y-8"
+            >
+              {/* MODULE 1: DASHBOARD OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-8 animate-in fade-in duration-200">
               {/* Banner Welcome */}
@@ -3007,6 +3287,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
               </div>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
 

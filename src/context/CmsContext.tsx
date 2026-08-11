@@ -846,14 +846,26 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateFeaturedEvent = async (event: EventItem) => {
+  const updateFeaturedEvent = async (event: EventItem | null) => {
     setSiteContent((prev) => ({ ...prev, featuredEvent: event }));
+    if (event) {
+      setEvents((prev) =>
+        prev.map((e) => ({
+          ...e,
+          isFeatured: e.id === event.id,
+          ...(e.id === event.id ? event : {}),
+        }))
+      );
+    }
     if (db) {
       try {
         await setDoc(doc(db, 'content', 'homepage'), {
           featuredEvent: event,
           updatedAt: new Date().toISOString(),
         }, { merge: true });
+        if (event && event.id) {
+          await updateDoc(doc(db, 'events', event.id), { ...event, isFeatured: true });
+        }
       } catch (e) {
         console.error('Firestore updateFeaturedEvent error:', e);
       }
@@ -1021,9 +1033,33 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateEvent = async (id: string, eventData: Partial<EventItem>) => {
-    setEvents((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...eventData } : item))
-    );
+    let updatedItem: EventItem | undefined;
+    setEvents((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id === id) {
+          updatedItem = { ...item, ...eventData };
+          return updatedItem;
+        }
+        return item;
+      });
+      try { localStorage.setItem('spy_cms_events', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+
+    if (siteContent.featuredEvent && siteContent.featuredEvent.id === id && updatedItem) {
+      setSiteContent((prev) => ({ ...prev, featuredEvent: updatedItem! }));
+      if (db) {
+        try {
+          await setDoc(doc(db, 'content', 'homepage'), {
+            featuredEvent: updatedItem,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
+        } catch (e) {
+          console.error('Firestore sync updateFeaturedEvent error:', e);
+        }
+      }
+    }
+
     if (db) {
       try {
         await updateDoc(doc(db, 'events', id), eventData);
@@ -1034,11 +1070,34 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteEvent = async (id: string) => {
+    let remainingEvents: EventItem[] = [];
     setEvents((prev) => {
       const updated = prev.filter((item) => item.id !== id);
+      remainingEvents = updated;
       try { localStorage.setItem('spy_cms_events', JSON.stringify(updated)); } catch (e) {}
       return updated;
     });
+
+    // If deleting the currently featured event, auto-promote another event or clear featured
+    if (siteContent.featuredEvent && siteContent.featuredEvent.id === id) {
+      const nextFeatured = remainingEvents.find((e) => e.isFeatured) || remainingEvents[0] || null;
+      if (nextFeatured) {
+        updateFeaturedEvent(nextFeatured);
+      } else {
+        setSiteContent((prev) => ({ ...prev, featuredEvent: null }));
+        if (db) {
+          try {
+            await setDoc(doc(db, 'content', 'homepage'), {
+              featuredEvent: null,
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+          } catch (e) {
+            console.error('Firestore clear featuredEvent error:', e);
+          }
+        }
+      }
+    }
+
     if (db) {
       try {
         await deleteDoc(doc(db, 'events', id));
@@ -1048,13 +1107,28 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleFeaturedEvent = (id: string) => {
+  const toggleFeaturedEvent = async (id: string) => {
     const target = events.find((e) => e.id === id);
     if (target) {
-      updateFeaturedEvent(target);
-      setEvents((prev) =>
-        prev.map((e) => ({ ...e, isFeatured: e.id === id }))
-      );
+      const updatedEvents = events.map((e) => ({
+        ...e,
+        isFeatured: e.id === id,
+      }));
+      setEvents(updatedEvents);
+      try { localStorage.setItem('spy_cms_events', JSON.stringify(updatedEvents)); } catch (e) {}
+
+      const newFeatured = { ...target, isFeatured: true };
+      updateFeaturedEvent(newFeatured);
+
+      if (db) {
+        for (const e of updatedEvents) {
+          try {
+            await updateDoc(doc(db, 'events', e.id), { isFeatured: e.isFeatured });
+          } catch (err) {
+            console.error('Firestore toggleFeaturedEvent doc update error:', err);
+          }
+        }
+      }
     }
   };
 

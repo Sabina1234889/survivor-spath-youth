@@ -214,7 +214,7 @@ export interface SiteContent {
   };
   focusAreas: FocusAreaItem[];
   stats: StatItem[];
-  featuredEvent: EventItem;
+  featuredEvent: EventItem | null;
   cta: {
     headline: string;
     description: string;

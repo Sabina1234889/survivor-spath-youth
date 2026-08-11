@@ -52,14 +52,14 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
     <header
       className={`sticky top-0 z-40 transition-all duration-300 border-b ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-md border-purple-100 py-3'
-          : 'bg-white border-purple-100/60 py-4'
+          ? 'bg-white/95 backdrop-blur-md shadow-md border-purple-100 py-1.5 sm:py-2.5'
+          : 'bg-white border-purple-100/60 py-2 sm:py-3.5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo Left */}
-          <div onClick={() => handleNavClick('home')}>
+          <div onClick={() => handleNavClick('home')} className="shrink-0">
             <Logo />
           </div>
 
@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
           </div>
 
           {/* Mobile Menu Toggle Button */}
-          <div className="flex items-center gap-2 xl:hidden">
+          <div className="flex items-center gap-1 sm:gap-2 xl:hidden shrink-0">
             {isAdmin && (
               <button
                 onClick={handleAdminAccess}
-                className="p-2 rounded-lg text-purple-900 bg-purple-100/70 cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-lg text-purple-900 bg-purple-100/70 cursor-pointer"
                 title="CMS Admin"
               >
                 <Settings className="w-4 h-4" />
@@ -124,16 +124,16 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
             )}
             <button
               onClick={() => handleNavClick('get-involved')}
-              className="sm:hidden px-3 py-1.5 rounded-lg font-bold text-[11px] uppercase tracking-wider text-white bg-purple-700 cursor-pointer"
+              className="sm:hidden px-2.5 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider text-white bg-purple-700 cursor-pointer whitespace-nowrap"
             >
               GET INVOLVED
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl text-purple-950 hover:bg-purple-50 transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl text-purple-950 hover:bg-purple-50 transition-colors cursor-pointer"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
             </button>
           </div>
         </div>

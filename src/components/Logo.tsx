@@ -14,9 +14,9 @@ export const Logo: React.FC<LogoProps> = ({
   const isDarkBg = variant === 'dark';
 
   return (
-    <div className={`flex items-center gap-3 select-none cursor-pointer group ${className}`}>
+    <div className={`flex items-center gap-2 sm:gap-3 select-none cursor-pointer group ${className}`}>
       {/* Official Emblem Logo SVG Container */}
-      <div className="relative w-11 h-11 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 p-2 shadow-md shadow-purple-950/30 group-hover:scale-105 transition-transform duration-300 border border-purple-700/50">
+      <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 p-1.5 sm:p-2 shadow-md shadow-purple-950/30 group-hover:scale-105 transition-transform duration-300 border border-purple-700/50">
         <svg
           viewBox="0 0 100 100"
           fill="none"
@@ -87,23 +87,23 @@ export const Logo: React.FC<LogoProps> = ({
       </div>
 
       {/* Brand Typography */}
-      <div className="flex flex-col">
-        <div className="flex items-baseline gap-1.5 leading-none">
+      <div className="flex flex-col min-w-0">
+        <div className="flex items-center gap-1.5 leading-none">
           <span
-            className={`font-black tracking-tight text-lg md:text-xl font-display ${
+            className={`font-black tracking-tight text-xs sm:text-base md:text-xl font-display whitespace-nowrap ${
               isDarkBg ? 'text-white' : 'text-purple-950'
             }`}
           >
             SURVIVOR’S PATH
           </span>
+          <span className="px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[10px] font-extrabold tracking-wider sm:tracking-widest uppercase rounded bg-purple-700 text-white leading-none shadow-2xs shrink-0">
+            YOUTH
+          </span>
         </div>
         {showSubtitle && (
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="px-1.5 py-0.5 text-[10px] font-extrabold tracking-widest uppercase rounded bg-purple-700 text-white leading-none shadow-2xs">
-              YOUTH
-            </span>
+          <div className="hidden sm:flex items-center gap-1.5 mt-0.5">
             <span
-              className={`text-[11px] font-semibold tracking-tight ${
+              className={`text-[10px] sm:text-[11px] font-semibold tracking-tight ${
                 isDarkBg ? 'text-purple-200/80' : 'text-purple-800/80'
               }`}
             >

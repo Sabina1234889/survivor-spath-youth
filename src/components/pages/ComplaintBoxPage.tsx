@@ -60,7 +60,7 @@ export const ComplaintBoxPage: React.FC = () => {
     <div className="space-y-12 pb-16">
       {/* Calm Header */}
       <section className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white py-16 rounded-b-3xl shadow-lg relative overflow-hidden">
-        <div className="max-w-3xl mx-auto px-4 text-center space-y-4 relative z-10">
+        <div className="max-w-5xl mx-auto px-4 text-center space-y-4 relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-800/80 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-600">
             <Lock className="w-3.5 h-3.5 text-purple-300" />
             <span>SAFE & CONFIDENTIAL REPORTING</span>
@@ -76,7 +76,7 @@ export const ComplaintBoxPage: React.FC = () => {
       </section>
 
       {/* Main Form Container in Calm Lavender */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-purple-50/70 rounded-3xl p-6 sm:p-10 border border-purple-100 shadow-sm space-y-8">
           {/* Prominent Privacy Notice Box */}
           <div className="bg-white p-5 rounded-2xl border border-purple-200/80 shadow-2xs flex items-start gap-4">

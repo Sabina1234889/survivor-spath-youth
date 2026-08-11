@@ -388,90 +388,103 @@ export const AdminCmsModal: React.FC = () => {
           )}
 
           {/* TAB 5: FEATURED EVENT */}
-          {activeTab === 'event' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
-                Edit Flagship Featured Event
-              </h3>
+          {activeTab === 'event' && (() => {
+            const currentFeatEvent = siteContent.featuredEvent || {
+              id: 'event-youth-fest-2026',
+              title: 'SURVIVOR’S PATH YOUTH FEST 2026',
+              date: '21 August 2026',
+              location: 'Jessore, Bangladesh',
+              shortDescription: 'A flagship youth-focused festival celebrating empowerment.',
+              fullDescription: '',
+              isFeatured: true,
+              image: '',
+              status: 'upcoming' as const,
+            };
+            return (
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
+                  Edit Flagship Featured Event
+                </h3>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                  Event Title
-                </label>
-                <input
-                  type="text"
-                  value={siteContent.featuredEvent.title}
-                  onChange={(e) =>
-                    updateFeaturedEvent({ ...siteContent.featuredEvent, title: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Event Date
+                    Event Title
                   </label>
                   <input
                     type="text"
-                    value={siteContent.featuredEvent.date}
+                    value={currentFeatEvent.title}
                     onChange={(e) =>
-                      updateFeaturedEvent({ ...siteContent.featuredEvent, date: e.target.value })
+                      updateFeaturedEvent({ ...currentFeatEvent, title: e.target.value })
                     }
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                      Event Date
+                    </label>
+                    <input
+                      type="text"
+                      value={currentFeatEvent.date}
+                      onChange={(e) =>
+                        updateFeaturedEvent({ ...currentFeatEvent, date: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={currentFeatEvent.location}
+                      onChange={(e) =>
+                        updateFeaturedEvent({
+                          ...currentFeatEvent,
+                          location: e.target.value,
+                        })
+                      }
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Location
+                    Short Description
                   </label>
-                  <input
-                    type="text"
-                    value={siteContent.featuredEvent.location}
+                  <textarea
+                    rows={2}
+                    value={currentFeatEvent.shortDescription}
                     onChange={(e) =>
                       updateFeaturedEvent({
-                        ...siteContent.featuredEvent,
-                        location: e.target.value,
+                        ...currentFeatEvent,
+                        shortDescription: e.target.value,
                       })
                     }
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                  Short Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={siteContent.featuredEvent.shortDescription}
-                  onChange={(e) =>
-                    updateFeaturedEvent({
-                      ...siteContent.featuredEvent,
-                      shortDescription: e.target.value,
-                    })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                />
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                    Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={currentFeatEvent.image}
+                    onChange={(e) =>
+                      updateFeaturedEvent({ ...currentFeatEvent, image: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                  />
+                </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                  Image URL
-                </label>
-                <input
-                  type="text"
-                  value={siteContent.featuredEvent.image}
-                  onChange={(e) =>
-                    updateFeaturedEvent({ ...siteContent.featuredEvent, image: e.target.value })
-                  }
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                />
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* TAB 6: CTA & CONTACT */}
           {activeTab === 'ctaAndContact' && (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PageId, ProgramItem, EventItem } from './types';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -18,7 +19,7 @@ import { AuthModal } from './components/modals/AuthModal';
 import { AdminCmsModal } from './components/modals/AdminCmsModal';
 import { AdminDashboardPage } from './components/pages/AdminDashboardPage';
 import { CmsProvider, useCms } from './context/CmsContext';
-import { PROGRAMS, FEATURED_EVENT } from './data/mockData';
+import { PROGRAMS } from './data/mockData';
 
 function AppContent() {
   const { authModalOpen, setAuthModalOpen, isAdmin, currentUser } = useCms();
@@ -28,6 +29,11 @@ function AppContent() {
   const [selectedProgram, setSelectedProgram] = useState<ProgramItem | null>(null);
   const [registerEvent, setRegisterEvent] = useState<EventItem | null>(null);
   const [involvementType, setInvolvementType] = useState<InvolvementType | null>(null);
+
+  // Smooth scroll to top whenever activePage route changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [activePage]);
 
   // Safety Guard: Automatically kick non-admin users out of admin page
   useEffect(() => {
@@ -102,47 +108,96 @@ function AppContent() {
     setInvolvementType('School Collaboration');
   };
 
+  if (activePage === 'admin') {
+    return (
+      <div className="h-screen h-[100dvh] bg-slate-50 text-gray-900 font-sans selection:bg-purple-200 selection:text-purple-900 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="admin-page"
+            initial={{ opacity: 0, scale: 0.985 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full w-full"
+          >
+            <AdminDashboardPage setActivePage={handlePageChange} />
+          </motion.div>
+        </AnimatePresence>
+
+        <ProgramDetailModal
+          program={selectedProgram}
+          onClose={() => setSelectedProgram(null)}
+          onInquire={handleInquireProgram}
+        />
+
+        <EventRegistrationModal
+          event={registerEvent}
+          onClose={() => setRegisterEvent(null)}
+        />
+
+        <GetInvolvedModal
+          type={involvementType}
+          onClose={() => setInvolvementType(null)}
+        />
+
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+        />
+
+        <AdminCmsModal />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 flex flex-col font-sans selection:bg-purple-200 selection:text-purple-900">
       {/* Sticky Header */}
       <Header activePage={activePage} setActivePage={handlePageChange} />
 
-      {/* Main Page View */}
-      <main className="flex-1">
-        {activePage === 'home' && (
-          <HomePage
-            setActivePage={handlePageChange}
-            onOpenEventRegister={() => setRegisterEvent(FEATURED_EVENT)}
-            onOpenProgramModal={handleOpenProgramModal}
-            onOpenInvolvementModal={(type) => setInvolvementType(type)}
-          />
-        )}
+      {/* Main Page View with Smooth Page Transitions */}
+      <main className="flex-1 overflow-x-hidden min-h-[calc(100vh-160px)]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activePage}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="w-full"
+          >
+            {activePage === 'home' && (
+              <HomePage
+                setActivePage={handlePageChange}
+                onOpenEventRegister={(ev) => setRegisterEvent(ev || null)}
+                onOpenProgramModal={handleOpenProgramModal}
+                onOpenInvolvementModal={(type) => setInvolvementType(type)}
+              />
+            )}
 
-        {activePage === 'about' && <AboutPage />}
+            {activePage === 'about' && <AboutPage />}
 
-        {activePage === 'events' && (
-          <EventsPage onOpenRegisterModal={() => setRegisterEvent(FEATURED_EVENT)} />
-        )}
+            {activePage === 'events' && (
+              <EventsPage onOpenRegisterModal={(ev) => setRegisterEvent(ev || null)} />
+            )}
 
-        {activePage === 'impact' && <ImpactPage />}
+            {activePage === 'impact' && <ImpactPage />}
 
-        {activePage === 'team' && <TeamPage />}
+            {activePage === 'team' && <TeamPage />}
 
-        {activePage === 'complaint-box' && <ComplaintBoxPage />}
+            {activePage === 'complaint-box' && <ComplaintBoxPage />}
 
-        {activePage === 'faq' && <FaqPage />}
+            {activePage === 'faq' && <FaqPage />}
 
-        {activePage === 'contact' && (
-          <ContactPage onOpenInvolvementModal={(type) => setInvolvementType(type)} />
-        )}
+            {activePage === 'contact' && (
+              <ContactPage onOpenInvolvementModal={(type) => setInvolvementType(type)} />
+            )}
 
-        {activePage === 'get-involved' && (
-          <GetInvolvedPage onOpenInvolvementModal={(type) => setInvolvementType(type)} />
-        )}
-
-        {activePage === 'admin' && (
-          <AdminDashboardPage setActivePage={handlePageChange} />
-        )}
+            {activePage === 'get-involved' && (
+              <GetInvolvedPage onOpenInvolvementModal={(type) => setInvolvementType(type)} />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Modals */}

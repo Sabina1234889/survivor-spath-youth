@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageId } from '../../types';
+import { PageId, EventItem } from '../../types';
 import { useCms } from '../../context/CmsContext';
 import { PartnersSection } from '../PartnersSection';
 import {
@@ -18,7 +18,7 @@ import {
 
 interface HomePageProps {
   setActivePage: (page: PageId) => void;
-  onOpenEventRegister: () => void;
+  onOpenEventRegister: (event?: EventItem) => void;
   onOpenProgramModal: (programId: string) => void;
   onOpenInvolvementModal: (type: 'Volunteer' | 'Partner With Us') => void;
 }
@@ -29,8 +29,16 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenProgramModal,
   onOpenInvolvementModal,
 }) => {
-  const { siteContent } = useCms();
-  const { hero, whoWeAre, focusAreas, stats, featuredEvent, cta } = siteContent;
+  const { siteContent, events } = useCms();
+  const { hero, whoWeAre, focusAreas, stats, cta } = siteContent;
+
+  const featuredEvent =
+    events.find((e) => e.isFeatured) ||
+    (siteContent.featuredEvent && events.some((e) => e.id === siteContent.featuredEvent?.id)
+      ? siteContent.featuredEvent
+      : null) ||
+    events[0] ||
+    null;
 
   const getFocusIcon = (iconName: string) => {
     switch (iconName) {
@@ -87,15 +95,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => setActivePage('programs')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-900/40 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => setActivePage('events')}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-900/40 btn-3d-push cursor-pointer flex items-center justify-center gap-2"
             >
               <span>{hero.primaryBtnText}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => setActivePage('get-involved')}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-purple-100 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-purple-300/30 transition-all cursor-pointer"
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-purple-100 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-purple-300/30 btn-3d-push cursor-pointer"
             >
               {hero.secondaryBtnText}
             </button>
@@ -165,7 +173,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           {focusAreas.map((area, idx) => (
             <div
               key={idx}
-              className="bg-white p-7 rounded-2xl border border-purple-100 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-300 space-y-4 group"
+              className="bg-white p-7 rounded-2xl border border-purple-100 shadow-xs card-3d-hover space-y-4 group"
             >
               <div className="w-12 h-12 rounded-xl bg-purple-100/80 group-hover:bg-purple-600 flex items-center justify-center transition-colors">
                 {React.cloneElement(getFocusIcon(area.iconName), {
@@ -214,84 +222,86 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* ================= FEATURED EVENT ================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white rounded-3xl overflow-hidden shadow-xl border border-purple-800">
-          <div className="grid grid-cols-1 lg:grid-cols-12">
-            {/* Left Content */}
-            <div className="lg:col-span-7 p-8 sm:p-12 lg:p-14 space-y-6 flex flex-col justify-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-800/80 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-600">
-                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                <span>FLAGSHIP FEATURED EVENT</span>
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display text-white leading-tight">
-                {featuredEvent.title}
-              </h2>
-
-              <div className="flex flex-wrap gap-4 text-sm text-purple-200">
-                <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
-                  <Calendar className="w-4 h-4 text-purple-400" />
-                  {featuredEvent.date}
-                </span>
-                <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
-                  <MapPin className="w-4 h-4 text-purple-400" />
-                  {featuredEvent.location}
-                </span>
-              </div>
-
-              <p className="text-purple-100/90 text-base leading-relaxed">
-                {featuredEvent.shortDescription}
-              </p>
-
-              {/* Highlights Preview */}
-              {featuredEvent.highlights && featuredEvent.highlights.length > 0 && (
-                <div className="pt-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300 mb-3">
-                    Event Highlights & Activities:
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {featuredEvent.highlights.slice(0, 6).map((hl, i) => (
-                      <div
-                        key={i}
-                        className="text-xs text-purple-200 bg-purple-900/50 px-2.5 py-1.5 rounded-md border border-purple-800 flex items-center gap-1.5"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                        <span>{hl}</span>
-                      </div>
-                    ))}
-                  </div>
+      {featuredEvent && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white rounded-3xl overflow-hidden shadow-xl border border-purple-800">
+            <div className="grid grid-cols-1 lg:grid-cols-12">
+              {/* Left Content */}
+              <div className="lg:col-span-7 p-8 sm:p-12 lg:p-14 space-y-6 flex flex-col justify-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-800/80 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-600">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                  <span>FLAGSHIP FEATURED EVENT</span>
                 </div>
-              )}
 
-              <div className="pt-4 flex flex-wrap items-center gap-4">
-                <button
-                  onClick={() => setActivePage('events')}
-                  className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 transition-all shadow-md cursor-pointer"
-                >
-                  View Event Details
-                </button>
-                <button
-                  onClick={onOpenEventRegister}
-                  className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 transition-all shadow-md cursor-pointer"
-                >
-                  Get Involved / Register
-                </button>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display text-white leading-tight">
+                  {featuredEvent.title}
+                </h2>
+
+                <div className="flex flex-wrap gap-4 text-sm text-purple-200">
+                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
+                    <Calendar className="w-4 h-4 text-purple-400" />
+                    {featuredEvent.date}
+                  </span>
+                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
+                    <MapPin className="w-4 h-4 text-purple-400" />
+                    {featuredEvent.location}
+                  </span>
+                </div>
+
+                <p className="text-purple-100/90 text-base leading-relaxed">
+                  {featuredEvent.shortDescription}
+                </p>
+
+                {/* Highlights Preview */}
+                {featuredEvent.highlights && featuredEvent.highlights.length > 0 && (
+                  <div className="pt-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-purple-300 mb-3">
+                      Event Highlights & Activities:
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {featuredEvent.highlights.slice(0, 6).map((hl, i) => (
+                        <div
+                          key={i}
+                          className="text-xs text-purple-200 bg-purple-900/50 px-2.5 py-1.5 rounded-md border border-purple-800 flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                          <span>{hl}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4 flex flex-wrap items-center gap-4">
+                  <button
+                    onClick={() => setActivePage('events')}
+                    className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 btn-3d-push shadow-md cursor-pointer"
+                  >
+                    View Event Details
+                  </button>
+                  <button
+                    onClick={() => onOpenEventRegister(featuredEvent)}
+                    className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 btn-3d-push shadow-md cursor-pointer"
+                  >
+                    Get Involved / Register
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Right Photo */}
-            <div className="lg:col-span-5 relative min-h-[300px] lg:min-h-full">
-              <img
-                src={featuredEvent.image || undefined}
-                alt="Youth Fest 2026 Bangladesh"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-purple-950 lg:bg-gradient-to-r lg:from-purple-950 lg:to-transparent" />
+              {/* Right Photo */}
+              <div className="lg:col-span-5 relative min-h-[300px] lg:min-h-full">
+                <img
+                  src={featuredEvent.image || undefined}
+                  alt={featuredEvent.title}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-purple-950 lg:bg-gradient-to-r lg:from-purple-950 lg:to-transparent" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ================= PARTNERS & COLLABORATORS ================= */}
       <PartnersSection />
@@ -310,14 +320,14 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => onOpenInvolvementModal('Volunteer')}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 btn-3d-push shadow-md cursor-pointer flex items-center justify-center gap-2"
               >
                 <UserCheck className="w-4 h-4 text-purple-700" />
                 <span>{cta.primaryBtnText}</span>
               </button>
               <button
                 onClick={() => onOpenInvolvementModal('Partner With Us')}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 shadow-md transition-all cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 btn-3d-push shadow-md cursor-pointer"
               >
                 {cta.secondaryBtnText}
               </button>

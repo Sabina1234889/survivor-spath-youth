@@ -11,8 +11,14 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
   const { events, siteContent } = useCms();
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
 
-  const featuredEvent = siteContent.featuredEvent || events.find((e) => e.isFeatured) || events[0];
-  const otherEvents = events.filter((e) => e.id !== featuredEvent?.id);
+  const featuredEvent =
+    events.find((e) => e.isFeatured) ||
+    (siteContent.featuredEvent && events.some((e) => e.id === siteContent.featuredEvent?.id)
+      ? siteContent.featuredEvent
+      : null) ||
+    events[0] ||
+    null;
+  const otherEvents = featuredEvent ? events.filter((e) => e.id !== featuredEvent.id) : events;
 
   const upcomingEvents = otherEvents.filter((e) => e.status === 'upcoming');
   const pastEvents = otherEvents.filter((e) => e.status === 'past');
@@ -21,7 +27,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
     <div className="space-y-16 pb-16">
       {/* Page Header */}
       <section className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white py-16 rounded-b-3xl shadow-lg relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 text-center space-y-4 relative z-10">
+        <div className="max-w-5xl mx-auto px-4 text-center space-y-4 relative z-10">
           <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-800/80 px-3.5 py-1 rounded-full border border-purple-600">
             EVENTS & FESTIVALS
           </span>
@@ -92,7 +98,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
                 <div className="pt-4 flex flex-wrap gap-4">
                   <button
                     onClick={() => onOpenRegisterModal(featuredEvent)}
-                    className="px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                    className="px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 btn-3d-push shadow-lg cursor-pointer flex items-center gap-2"
                   >
                     <Ticket className="w-4 h-4 text-purple-700" />
                     <span>Register Free Ticket</span>
@@ -161,7 +167,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
             upcomingEvents.map((evt) => (
               <div
                 key={evt.id}
-                className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row"
+                className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs card-3d-hover flex flex-col sm:flex-row"
               >
                 <div className="sm:w-2/5 relative h-48 sm:h-auto bg-purple-100">
                   <img
@@ -195,7 +201,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
                   </div>
                   <button
                     onClick={() => onOpenRegisterModal(evt)}
-                    className="w-full py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                    className="w-full py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs uppercase tracking-wider btn-3d-push cursor-pointer"
                   >
                     Register / Details
                   </button>

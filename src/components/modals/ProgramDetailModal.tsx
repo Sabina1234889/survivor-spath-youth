@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ProgramItem } from '../../types';
 import { X, CheckCircle, Target, Users, ArrowRight } from 'lucide-react';
 
@@ -13,11 +14,17 @@ export const ProgramDetailModal: React.FC<ProgramDetailModalProps> = ({
   onClose,
   onInquire,
 }) => {
-  if (!program) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-purple-100 flex flex-col">
+    <AnimatePresence>
+      {program && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-purple-950/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-purple-100 flex flex-col"
+          >
         {/* Header Banner Image */}
         <div className="relative h-56 sm:h-64 w-full bg-purple-900 overflow-hidden">
           <img
@@ -107,14 +114,16 @@ export const ProgramDetailModal: React.FC<ProgramDetailModalProps> = ({
                 onInquire(program.title);
                 onClose();
               }}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-purple-700 hover:bg-purple-800 shadow-md transition-all cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-purple-700 hover:bg-purple-800 btn-3d-push shadow-md cursor-pointer"
             >
               <span>Bring This Program To My Institution</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
