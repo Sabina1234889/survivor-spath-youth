@@ -14,6 +14,7 @@ import {
   ArrowRight,
   CheckCircle2,
   UserCheck,
+  Compass,
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -43,23 +44,23 @@ export const HomePage: React.FC<HomePageProps> = ({
   const getFocusIcon = (iconName: string) => {
     switch (iconName) {
       case 'Sparkles':
-        return <Sparkles className="w-6 h-6 text-purple-600" />;
+        return <Sparkles className="w-6 h-6 text-purple-300" />;
       case 'GraduationCap':
-        return <GraduationCap className="w-6 h-6 text-purple-600" />;
+        return <GraduationCap className="w-6 h-6 text-purple-300" />;
       case 'HeartHandshake':
-        return <HeartHandshake className="w-6 h-6 text-purple-600" />;
+        return <HeartHandshake className="w-6 h-6 text-purple-300" />;
       case 'Users':
-        return <Users className="w-6 h-6 text-purple-600" />;
+        return <Users className="w-6 h-6 text-purple-300" />;
       case 'Lightbulb':
-        return <Lightbulb className="w-6 h-6 text-purple-600" />;
+        return <Lightbulb className="w-6 h-6 text-purple-300" />;
       case 'ShieldCheck':
       default:
-        return <ShieldCheck className="w-6 h-6 text-purple-600" />;
+        return <ShieldCheck className="w-6 h-6 text-purple-300" />;
     }
   };
 
   return (
-    <div className="space-y-16 lg:space-y-24 pb-12">
+    <div className="space-y-16 lg:space-y-24 pb-12 overflow-x-hidden">
       {/* ================= HERO SECTION ================= */}
       <section className="relative min-h-[580px] lg:min-h-[660px] flex items-center justify-center overflow-hidden bg-purple-950 text-white rounded-b-[2.5rem] lg:rounded-b-[3.5rem] shadow-xl">
         {/* Background Photograph */}
@@ -75,11 +76,11 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="absolute inset-0 bg-radial from-purple-600/20 via-transparent to-black/40" />
         </div>
 
-        {/* Hero Content */}
+        {/* Hero Content Container */}
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-800/70 backdrop-blur-md border border-purple-400/30 text-purple-200 text-xs sm:text-sm font-semibold tracking-wide uppercase shadow-lg animate-in fade-in slide-in-from-bottom-2">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-800/70 backdrop-blur-md border border-purple-400/30 text-purple-200 text-xs sm:text-sm font-semibold tracking-wide uppercase shadow-lg">
             <Sparkles className="w-4 h-4 text-purple-300" />
-            <span>{hero.badge}</span>
+            <span>An initiative of Survivor’s Path to empower young survivors</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight font-display leading-[1.15] text-white max-w-4xl mx-auto drop-shadow-md">
@@ -98,14 +99,15 @@ export const HomePage: React.FC<HomePageProps> = ({
               onClick={() => setActivePage('events')}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-900/40 btn-3d-push cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>{hero.primaryBtnText}</span>
-              <ArrowRight className="w-4 h-4" />
+              <Compass className="w-4 h-4 text-purple-200" />
+              <span>Explore Our Work</span>
+              <ArrowRight className="w-4 h-4 text-purple-200" />
             </button>
             <button
               onClick={() => setActivePage('get-involved')}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm tracking-wider uppercase text-purple-100 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-purple-300/30 btn-3d-push cursor-pointer"
             >
-              {hero.secondaryBtnText}
+              Get Involved
             </button>
           </div>
         </div>
@@ -116,7 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/50 rounded-3xl p-8 sm:p-12 lg:p-16 border border-purple-100 shadow-sm relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-7 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-purple-700 bg-purple-100 px-3 py-1 rounded-full">
+              <span className="text-xs font-bold uppercase tracking-widest text-purple-700 bg-purple-100 px-3.5 py-1.5 rounded-full shadow-xs">
                 WHO WE ARE
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-purple-950 font-display leading-tight">
@@ -158,7 +160,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ================= OUR FOCUS ================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
-          <span className="text-xs font-bold uppercase tracking-widest text-purple-700 bg-purple-100 px-3.5 py-1 rounded-full">
+          <span className="text-xs font-bold uppercase tracking-widest text-purple-700 bg-purple-100 px-3.5 py-1.5 rounded-full shadow-xs">
             OUR STRATEGIC PILLARS
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-purple-950 font-display">
@@ -190,17 +192,17 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* ================= IMPACT IN NUMBERS ================= */}
-      <section className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white py-16 lg:py-20">
+      <section className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white py-16 lg:py-20 rounded-3xl max-w-7xl mx-auto my-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-900/80 px-3.5 py-1 rounded-full border border-purple-700">
+            <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-900/80 px-3.5 py-1.5 rounded-full border border-purple-700">
               VERIFIED IMPACT
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
-              IMPACT IN NUMBERS
+              OUR IMPACT IN NUMBERS
             </h2>
-            <p className="text-purple-200/80 text-sm sm:text-base">
-              Concrete milestones achieved through our dedicated campaigns and survivor interventions.
+            <p className="text-purple-200 text-base">
+              Quantifiable progress in creating safer communities, expanding youth leadership, and providing critical support.
             </p>
           </div>
 
@@ -214,7 +216,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   {stat.value}
                 </div>
                 <div className="text-base font-bold text-white">{stat.label}</div>
-                <p className="text-xs text-purple-200/70 leading-relaxed">{stat.description}</p>
+                <p className="text-purple-200/80 text-xs">{stat.description}</p>
               </div>
             ))}
           </div>
@@ -224,11 +226,11 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* ================= FEATURED EVENT ================= */}
       {featuredEvent && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white rounded-3xl overflow-hidden shadow-xl border border-purple-800">
+          <div className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white rounded-3xl overflow-hidden shadow-xl border border-purple-800/50">
             <div className="grid grid-cols-1 lg:grid-cols-12">
               {/* Left Content */}
               <div className="lg:col-span-7 p-8 sm:p-12 lg:p-14 space-y-6 flex flex-col justify-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-800/80 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-600">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-800/60 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-700/60 shadow-xs">
                   <Sparkles className="w-3.5 h-3.5 text-purple-300" />
                   <span>FLAGSHIP FEATURED EVENT</span>
                 </div>
@@ -238,12 +240,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </h2>
 
                 <div className="flex flex-wrap gap-4 text-sm text-purple-200">
-                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
-                    <Calendar className="w-4 h-4 text-purple-400" />
+                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/60 px-3.5 py-2 rounded-xl border border-purple-800/60">
+                    <Calendar className="w-4 h-4 text-purple-300" />
                     {featuredEvent.date}
                   </span>
-                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-700">
-                    <MapPin className="w-4 h-4 text-purple-400" />
+                  <span className="flex items-center gap-1.5 font-semibold bg-purple-900/60 px-3.5 py-2 rounded-xl border border-purple-800/60">
+                    <MapPin className="w-4 h-4 text-purple-300" />
                     {featuredEvent.location}
                   </span>
                 </div>
@@ -262,7 +264,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       {featuredEvent.highlights.slice(0, 6).map((hl, i) => (
                         <div
                           key={i}
-                          className="text-xs text-purple-200 bg-purple-900/50 px-2.5 py-1.5 rounded-md border border-purple-800 flex items-center gap-1.5"
+                          className="text-xs text-purple-200 bg-purple-900/50 px-3 py-2 rounded-lg border border-purple-800/40 flex items-center gap-2"
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                           <span>{hl}</span>
@@ -275,13 +277,13 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <div className="pt-4 flex flex-wrap items-center gap-4">
                   <button
                     onClick={() => setActivePage('events')}
-                    className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 btn-3d-push shadow-md cursor-pointer"
+                    className="px-6 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-100 btn-3d-push shadow-md cursor-pointer"
                   >
                     View Event Details
                   </button>
                   <button
                     onClick={() => onOpenEventRegister(featuredEvent)}
-                    className="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 btn-3d-push shadow-md cursor-pointer"
+                    className="px-6 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-600 hover:bg-purple-700 btn-3d-push shadow-md cursor-pointer border border-purple-500/40"
                   >
                     Get Involved / Register
                   </button>
@@ -308,26 +310,26 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* ================= CALL TO ACTION ================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-purple-900 via-purple-950 to-indigo-900 text-white rounded-3xl p-10 sm:p-16 text-center space-y-6 shadow-xl relative overflow-hidden">
-          <div className="relative z-10 max-w-2xl mx-auto space-y-4">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-display leading-tight">
+        <div className="bg-gradient-to-r from-purple-900 via-purple-950 to-indigo-950 text-white rounded-3xl p-10 sm:p-16 text-center space-y-6 shadow-xl border border-purple-800/50">
+          <div className="max-w-2xl mx-auto space-y-5">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-display leading-tight text-white">
               {cta.headline}
             </h2>
-            <p className="text-purple-200/90 text-base sm:text-lg">
+            <p className="text-purple-200 text-base sm:text-lg">
               {cta.description}
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={() => onOpenInvolvementModal('Volunteer')}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-50 btn-3d-push shadow-md cursor-pointer flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-wider text-purple-950 bg-white hover:bg-purple-100 btn-3d-push shadow-md cursor-pointer flex items-center justify-center gap-2"
               >
-                <UserCheck className="w-4 h-4 text-purple-700" />
+                <UserCheck className="w-4 h-4 text-purple-800" />
                 <span>{cta.primaryBtnText}</span>
               </button>
               <button
                 onClick={() => onOpenInvolvementModal('Partner With Us')}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 btn-3d-push shadow-md cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 btn-3d-push shadow-md cursor-pointer border border-purple-500/40"
               >
                 {cta.secondaryBtnText}
               </button>
@@ -338,3 +340,4 @@ export const HomePage: React.FC<HomePageProps> = ({
     </div>
   );
 };
+
