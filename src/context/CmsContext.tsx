@@ -40,6 +40,7 @@ import {
   INITIAL_EVENT_ATTENDEES,
   PROGRAMS as INITIAL_PROGRAMS,
   TEAM_MEMBERS as INITIAL_TEAM,
+  DEFAULT_TEAM_CATEGORIES,
   PARTNER_LOGOS as INITIAL_PARTNERS,
   IMPACT_STORIES as INITIAL_IMPACT_STORIES,
   INITIAL_USER_ACCOUNTS,
@@ -280,7 +281,11 @@ interface CmsContextType {
   updateProgram: (id: string, programData: Partial<ProgramItem>) => void;
   deleteProgram: (id: string) => void;
 
-  // Team CRUD
+  // Team CRUD & Category Management
+  teamCategories: string[];
+  addTeamCategory: (category: string) => Promise<void>;
+  deleteTeamCategory: (category: string) => Promise<void>;
+  updateTeamCategories: (categories: string[]) => Promise<void>;
   addTeamMember: (member: Omit<TeamMember, 'id'>) => void;
   updateTeamMember: (id: string, memberData: Partial<TeamMember>) => void;
   deleteTeamMember: (id: string) => void;
@@ -361,6 +366,19 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error(e);
     }
     return INITIAL_TEAM;
+  });
+
+  const [teamCategories, setTeamCategories] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('spy_cms_team_categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return DEFAULT_TEAM_CATEGORIES;
   });
 
   const [partners, setPartners] = useState<PartnerLogo[]>(() => {
@@ -647,12 +665,28 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, (err) => console.warn('Firestore content listener notice:', err));
 
+    // Team Categories Listener (settings/team_categories)
+    const unsubTeamCategories = onSnapshot(doc(db, 'settings', 'team_categories'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (Array.isArray(data.categories) && data.categories.length > 0) {
+          setTeamCategories(data.categories);
+          try {
+            localStorage.setItem('spy_cms_team_categories', JSON.stringify(data.categories));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    }, (err) => console.warn('Firestore team_categories listener notice:', err));
+
     return () => {
       unsubInbox();
       unsubComplaints();
       unsubEvents();
       unsubAttendees();
       unsubTeam();
+      unsubTeamCategories();
       unsubPartners();
       unsubPrograms();
       unsubImpact();
@@ -1216,7 +1250,63 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Team CRUD
+  // Team CRUD & Category Management
+  const addTeamCategory = async (categoryName: string) => {
+    const clean = categoryName.trim();
+    if (!clean) return;
+    if (teamCategories.some((cat) => cat.toLowerCase() === clean.toLowerCase())) return;
+
+    const updated = [...teamCategories, clean];
+    setTeamCategories(updated);
+    try {
+      localStorage.setItem('spy_cms_team_categories', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
+      } catch (e) {
+        console.error('Firestore addTeamCategory error:', e);
+      }
+    }
+  };
+
+  const deleteTeamCategory = async (categoryName: string) => {
+    const clean = categoryName.trim().toLowerCase();
+    const updated = teamCategories.filter((cat) => cat.toLowerCase() !== clean);
+    setTeamCategories(updated);
+    try {
+      localStorage.setItem('spy_cms_team_categories', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
+      } catch (e) {
+        console.error('Firestore deleteTeamCategory error:', e);
+      }
+    }
+  };
+
+  const updateTeamCategories = async (newCategories: string[]) => {
+    const cleanList = newCategories.map((c) => c.trim()).filter(Boolean);
+    setTeamCategories(cleanList);
+    try {
+      localStorage.setItem('spy_cms_team_categories', JSON.stringify(cleanList));
+    } catch (e) {
+      console.error(e);
+    }
+    if (db) {
+      try {
+        await setDoc(doc(db, 'settings', 'team_categories'), { categories: cleanList }, { merge: true });
+      } catch (e) {
+        console.error('Firestore updateTeamCategories error:', e);
+      }
+    }
+  };
+
   const addTeamMember = async (memberData: Omit<TeamMember, 'id'>) => {
     const newId = `team-${Date.now()}`;
     const newMember: TeamMember = { ...memberData, id: newId };
@@ -1674,6 +1764,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEventAttendees(INITIAL_EVENT_ATTENDEES);
     setPrograms(INITIAL_PROGRAMS);
     setTeamMembers(INITIAL_TEAM);
+    setTeamCategories(DEFAULT_TEAM_CATEGORIES);
     setPartners(INITIAL_PARTNERS);
     setComplaints(INITIAL_COMPLAINTS);
     setInboxItems(INITIAL_INBOX_ITEMS);
@@ -1686,6 +1777,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('spy_cms_event_attendees');
       localStorage.removeItem('spy_cms_programs');
       localStorage.removeItem('spy_cms_team');
+      localStorage.removeItem('spy_cms_team_categories');
       localStorage.removeItem('spy_cms_partners');
       localStorage.removeItem('spy_cms_complaints');
       localStorage.removeItem('spy_cms_inbox');
@@ -1744,6 +1836,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProgram,
         updateProgram,
         deleteProgram,
+        teamCategories,
+        addTeamCategory,
+        deleteTeamCategory,
+        updateTeamCategories,
         addTeamMember,
         updateTeamMember,
         deleteTeamMember,

@@ -14,9 +14,9 @@ export const Logo: React.FC<LogoProps> = ({
   const isDarkBg = variant === 'dark';
 
   return (
-    <div className={`flex items-center gap-2 sm:gap-3 select-none cursor-pointer group ${className}`}>
+    <div className={`flex items-center gap-1.5 sm:gap-2.5 select-none cursor-pointer group ${className}`}>
       {/* Official Emblem Logo SVG Container */}
-      <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 shrink-0 flex items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 p-1.5 sm:p-2 shadow-md shadow-purple-950/30 group-hover:scale-105 transition-transform duration-300 border border-purple-700/50">
+      <div className="relative w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 shrink-0 flex items-center justify-center rounded-lg sm:rounded-2xl bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 p-1 sm:p-2 shadow-xs group-hover:scale-105 transition-transform duration-300 border border-purple-700/50">
         <svg
           viewBox="0 0 100 100"
           fill="none"

@@ -124,18 +124,28 @@ export interface TeamMember {
   id: string;
   name: string;
   role: string;
-  category:
-    | 'Founder'
-    | 'Chief Advisor'
-    | 'Human Resources'
-    | 'Core Team'
-    | 'Program Team'
-    | 'PR & Sponsorship Team'
-    | 'Volunteers';
+  category: string;
+  categories?: string[];
   bio: string;
   photo: string;
   email?: string;
   linkedin?: string;
+}
+
+export function getMemberCategories(
+  member?: { category?: string; categories?: string[] } | null
+): string[] {
+  if (!member) return [];
+  if (Array.isArray(member.categories) && member.categories.length > 0) {
+    return member.categories.map((c) => c.trim()).filter(Boolean);
+  }
+  if (member.category && typeof member.category === 'string') {
+    return member.category
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 export interface FaqItem {

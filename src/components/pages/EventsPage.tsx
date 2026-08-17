@@ -107,10 +107,12 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
               </div>
 
               {/* Photo Right */}
-              <div className="lg:col-span-5 relative min-h-[300px] lg:min-h-full">
+              <div className="lg:col-span-5 relative min-h-[300px] lg:min-h-full hardware-accelerated">
                 <img
                   src={featuredEvent.image || undefined}
                   alt={featuredEvent.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
@@ -169,10 +171,12 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
                 key={evt.id}
                 className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs card-3d-hover flex flex-col sm:flex-row"
               >
-                <div className="sm:w-2/5 relative h-48 sm:h-auto bg-purple-100">
+                <div className="sm:w-2/5 relative h-48 sm:h-auto bg-purple-100 hardware-accelerated">
                   <img
                     src={evt.image || undefined}
                     alt={evt.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -215,10 +219,12 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
                 key={evt.id}
                 className="bg-gray-50/80 rounded-2xl border border-gray-200 overflow-hidden shadow-2xs flex flex-col sm:flex-row"
               >
-                <div className="sm:w-2/5 relative h-48 sm:h-auto bg-gray-200">
+                <div className="sm:w-2/5 relative h-48 sm:h-auto bg-gray-200 hardware-accelerated">
                   <img
                     src={evt.image || undefined}
                     alt={evt.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover filter grayscale-20"
                     referrerPolicy="no-referrer"
                   />

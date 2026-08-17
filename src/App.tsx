@@ -32,7 +32,7 @@ function AppContent() {
 
   // Smooth scroll to top whenever activePage route changes
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [activePage]);
 
   // Safety Guard: Automatically kick non-admin users out of admin page

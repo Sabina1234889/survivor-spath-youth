@@ -60,14 +60,16 @@ export const PartnersSection: React.FC = () => {
               return (
                 <div
                   key={partner.name || idx}
-                  className="bg-white p-5 rounded-2xl border border-purple-100/90 shadow-2xs hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center justify-center text-center space-y-3 group cursor-default"
+                  className="bg-white p-5 rounded-2xl border border-purple-100/90 shadow-2xs hover:shadow-md hover:border-purple-300 transition-all hardware-accelerated flex flex-col items-center justify-center text-center space-y-3 group cursor-default"
                 >
                   {/* Top: Small soft-purple rounded square containing abbreviation/initials or logo image */}
-                  <div className="w-12 h-12 rounded-2xl bg-purple-100/90 text-purple-900 font-black flex items-center justify-center text-xs tracking-wider shadow-2xs group-hover:scale-105 group-hover:bg-purple-200 transition-all overflow-hidden p-1 flex-shrink-0">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100/90 text-purple-900 font-black flex items-center justify-center text-xs tracking-wider shadow-2xs group-hover:scale-105 group-hover:bg-purple-200 transition-all overflow-hidden p-1 flex-shrink-0 hardware-accelerated">
                     {isImage ? (
                       <img
                         src={partner.logoText || undefined}
                         alt={partner.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-contain rounded-xl"
                         referrerPolicy="no-referrer"
                       />

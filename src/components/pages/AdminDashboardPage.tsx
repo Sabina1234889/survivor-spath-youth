@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { doc, setDoc, getDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useCms } from '../../context/CmsContext';
-import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole } from '../../types';
+import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole, getMemberCategories } from '../../types';
 import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/mockData';
 import {
   LayoutDashboard,
@@ -54,6 +54,8 @@ import {
   BellRing,
   Volume2,
   AlertCircle,
+  Tag,
+  Check,
 } from 'lucide-react';
 
 interface AdminDashboardPageProps {
@@ -198,6 +200,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     addTeamMember,
     updateTeamMember,
     deleteTeamMember,
+    teamCategories,
+    addTeamCategory,
+    deleteTeamCategory,
+    updateTeamCategories,
     addPartner,
     updatePartner,
     deletePartner,
@@ -629,11 +635,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     category: 'Education',
   });
 
-  // Team Form State
+  // Team Form & Category State
+  const [newTeamCategoryInput, setNewTeamCategoryInput] = useState('');
+  const [customCategoryName, setCustomCategoryName] = useState('');
+
   const [teamForm, setTeamForm] = useState<Omit<TeamMember, 'id'>>({
     name: '',
     role: '',
     category: 'Core Team',
+    categories: ['Core Team'],
     bio: '',
     photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
     email: '',
@@ -719,15 +729,44 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     setShowAddProgramModal(false);
   };
 
-  const handleSaveTeam = (e: React.FormEvent) => {
+  const handleSaveTeam = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!teamForm.name.trim() || !teamForm.role.trim()) {
+      alert('Please fill in member Name and Role.');
+      return;
+    }
+
+    let currentCategories = teamForm.categories && teamForm.categories.length > 0
+      ? [...teamForm.categories]
+      : (teamForm.category ? [teamForm.category] : []);
+
+    if (customCategoryName.trim()) {
+      const newCat = customCategoryName.trim();
+      if (!currentCategories.some((c) => c.toLowerCase() === newCat.toLowerCase())) {
+        currentCategories.push(newCat);
+      }
+      await addTeamCategory(newCat);
+    }
+
+    if (currentCategories.length === 0) {
+      alert('Please select or add at least one Category Tag for this profile.');
+      return;
+    }
+
+    const payload: Omit<TeamMember, 'id'> = {
+      ...teamForm,
+      categories: currentCategories,
+      category: currentCategories.join(', '),
+    };
+
     if (editingTeamMember) {
-      updateTeamMember(editingTeamMember.id, teamForm);
+      await updateTeamMember(editingTeamMember.id, payload);
       setEditingTeamMember(null);
     } else {
-      addTeamMember(teamForm);
+      await addTeamMember(payload);
     }
     setShowAddTeamModal(false);
+    setCustomCategoryName('');
   };
 
   const handleSavePartner = (e: React.FormEvent) => {
@@ -2602,6 +2641,96 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 </p>
               </div>
 
+              {/* Dynamic Category Management Section */}
+              <div className="bg-purple-50/70 p-5 sm:p-6 rounded-3xl border border-purple-200 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-purple-200/70 pb-3">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-purple-950 font-display uppercase tracking-wider flex items-center gap-2">
+                      <span>Team Categories & Filter Tabs</span>
+                      <span className="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-black">
+                        {teamCategories.length}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-purple-900/70 font-medium mt-0.5">
+                      Add, remove, or customize categories. The filter buttons on the public "Our Team" page update automatically.
+                    </p>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (newTeamCategoryInput.trim()) {
+                        addTeamCategory(newTeamCategoryInput.trim());
+                        setNewTeamCategoryInput('');
+                      }
+                    }}
+                    className="flex items-center gap-2 w-full sm:w-auto"
+                  >
+                    <input
+                      type="text"
+                      placeholder="e.g. Finance & Operations"
+                      value={newTeamCategoryInput}
+                      onChange={(e) => setNewTeamCategoryInput(e.target.value)}
+                      className="px-3.5 py-2 rounded-xl border border-purple-300 text-xs font-bold text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-600 outline-none w-full sm:w-56"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTeamCategoryInput.trim()}
+                      className="px-4 py-2 rounded-xl bg-purple-800 hover:bg-purple-900 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-xs flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Categories List */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {teamCategories.map((category) => {
+                    const memberCount = teamMembers.filter((m) =>
+                      getMemberCategories(m).some(
+                        (c) => c.toLowerCase() === category.toLowerCase()
+                      )
+                    ).length;
+
+                    return (
+                      <div
+                        key={category}
+                        className="bg-white border border-purple-200 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 shadow-xs hover:border-purple-300 transition-all group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-purple-950">{category}</span>
+                          <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded-md">
+                            {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Are you sure you want to delete the category "${category}"?${
+                                  memberCount > 0
+                                    ? ` Note: ${memberCount} team member(s) currently have this category tag.`
+                                    : ''
+                                }`
+                              )
+                            ) {
+                              deleteTeamCategory(category);
+                            }
+                          }}
+                          title={`Delete category "${category}"`}
+                          className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Team Members Grid Section */}
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-purple-100 pb-3">
@@ -2620,11 +2749,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                         name: '',
                         role: '',
                         category: 'Core Team',
+                        categories: ['Core Team'],
                         bio: '',
                         photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
                         email: '',
                         linkedin: '',
                       });
+                      setCustomCategoryName('');
                       setShowAddTeamModal(true);
                     }}
                     className="px-5 py-2.5 rounded-xl bg-purple-800 hover:bg-purple-900 text-white font-bold text-xs uppercase tracking-wider shadow-md flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
@@ -2653,8 +2784,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           <div className="text-[11px] text-purple-700 font-semibold truncate">
                             {member.role}
                           </div>
-                          <div className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">
-                            {member.category}
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {getMemberCategories(member).map((cat) => (
+                              <span
+                                key={cat}
+                                className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-900"
+                              >
+                                {cat}
+                              </span>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -2664,7 +2802,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           type="button"
                           onClick={() => {
                             setEditingTeamMember(member);
-                            setTeamForm(member);
+                            const memberCats = getMemberCategories(member);
+                            setTeamForm({
+                              name: member.name,
+                              role: member.role,
+                              category: member.category || memberCats[0] || 'Core Team',
+                              categories: memberCats.length > 0 ? memberCats : ['Core Team'],
+                              bio: member.bio || '',
+                              photo: member.photo || '',
+                              email: member.email || '',
+                              linkedin: member.linkedin || '',
+                            });
+                            setCustomCategoryName('');
                             setShowAddTeamModal(true);
                           }}
                           title="Edit Team Member"
@@ -4170,38 +4319,170 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                  Designated Role / Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Executive Director"
-                  value={teamForm.role}
-                  onChange={(e) => setTeamForm({ ...teamForm, role: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
-                />
+            <div>
+              <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                Designated Role / Title
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Executive Director, Legal Advisor, District Coordinator"
+                value={teamForm.role}
+                onChange={(e) => setTeamForm({ ...teamForm, role: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
+              />
+            </div>
+
+            {/* MULTIPLE CATEGORY TAGS (MULTI-SELECT) */}
+            <div className="bg-purple-50/80 p-4 rounded-2xl border border-purple-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-purple-700" />
+                  <label className="block text-xs font-bold uppercase text-purple-950">
+                    Category Tags (Multi-Select)
+                  </label>
+                </div>
+                <span className="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                  {(teamForm.categories || []).length} Selected
+                </span>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                  Category Tag
-                </label>
-                <select
-                  value={teamForm.category}
-                  onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value as any })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none bg-white cursor-pointer"
+              <p className="text-[11px] text-purple-900/80 leading-relaxed">
+                Assign one or multiple tags (e.g. <span className="font-semibold text-purple-950">National Board</span>, <span className="font-semibold text-purple-950">Dhaka Division</span>, <span className="font-semibold text-purple-950">Founder</span>). This member will appear under every selected category filter on the website.
+              </p>
+
+              {/* Selected Tag Pills */}
+              {(teamForm.categories || []).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(teamForm.categories || []).map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1 text-xs font-bold bg-purple-800 text-white px-2.5 py-1 rounded-xl shadow-2xs animate-in fade-in"
+                    >
+                      <span>{cat}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (teamForm.categories || []).filter((c) => c !== cat);
+                          setTeamForm({
+                            ...teamForm,
+                            categories: updated,
+                            category: updated.join(', '),
+                          });
+                        }}
+                        className="hover:bg-purple-950 p-0.5 rounded-full cursor-pointer transition-colors"
+                        title={`Remove ${cat}`}
+                      >
+                        <X className="w-3 h-3 text-purple-200" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-rose-600 font-semibold bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200">
+                  Please select or create at least one category tag.
+                </div>
+              )}
+
+              {/* Available Category Checkbox / Toggle Pills */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-900/70 block">
+                  Available Tags (Click to toggle):
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from(new Set([...teamCategories, ...(teamForm.categories || [])])).map((cat) => {
+                    const isSelected = (teamForm.categories || []).includes(cat);
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          let updated: string[];
+                          if (isSelected) {
+                            updated = (teamForm.categories || []).filter((c) => c !== cat);
+                          } else {
+                            updated = [...(teamForm.categories || []), cat];
+                          }
+                          setTeamForm({
+                            ...teamForm,
+                            categories: updated,
+                            category: updated.join(', '),
+                          });
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                          isSelected
+                            ? 'bg-purple-800 text-white border-purple-800 shadow-2xs scale-102'
+                            : 'bg-white text-purple-950 border-purple-200 hover:bg-purple-100/60 hover:border-purple-300'
+                        }`}
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-md flex items-center justify-center text-[10px] font-black border ${
+                            isSelected
+                              ? 'bg-white text-purple-900 border-white'
+                              : 'bg-purple-50 border-purple-300 text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                        <span>{cat}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Add New Custom Tag Inline */}
+              <div className="pt-2 border-t border-purple-200/60 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Create new tag (e.g. Chittagong Division)..."
+                  value={customCategoryName}
+                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (customCategoryName.trim()) {
+                        const newCat = customCategoryName.trim();
+                        addTeamCategory(newCat);
+                        const current = teamForm.categories || [];
+                        if (!current.includes(newCat)) {
+                          const updated = [...current, newCat];
+                          setTeamForm({
+                            ...teamForm,
+                            categories: updated,
+                            category: updated.join(', '),
+                          });
+                        }
+                        setCustomCategoryName('');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-1.5 rounded-xl border border-purple-300 text-xs font-medium text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-600 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customCategoryName.trim()) {
+                      const newCat = customCategoryName.trim();
+                      addTeamCategory(newCat);
+                      const current = teamForm.categories || [];
+                      if (!current.includes(newCat)) {
+                        const updated = [...current, newCat];
+                        setTeamForm({
+                          ...teamForm,
+                          categories: updated,
+                          category: updated.join(', '),
+                        });
+                      }
+                      setCustomCategoryName('');
+                    }
+                  }}
+                  disabled={!customCategoryName.trim()}
+                  className="px-3.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold text-xs shadow-2xs flex items-center gap-1 cursor-pointer transition-all shrink-0"
                 >
-                  <option value="Founder">Founder</option>
-                  <option value="Chief Advisor">Chief Advisor</option>
-                  <option value="Human Resources">Human Resources</option>
-                  <option value="Core Team">Core Team</option>
-                  <option value="Program Team">Program Team</option>
-                  <option value="PR & Sponsorship Team">PR & Sponsorship Team</option>
-                  <option value="Volunteers">Volunteers</option>
-                </select>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Tag</span>
+                </button>
               </div>
             </div>
 

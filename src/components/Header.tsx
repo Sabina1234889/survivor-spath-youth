@@ -15,10 +15,17 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
   const { currentUser, isAdmin, setAuthModalOpen } = useCms();
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 20);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -50,14 +57,14 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-300 border-b ${
+      className={`sticky top-0 z-40 sticky-header-gpu hardware-accelerated transition-all duration-300 border-b ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-md border-purple-100 py-1.5 sm:py-2.5'
-          : 'bg-white border-purple-100/60 py-2 sm:py-3.5'
+          ? 'bg-white/95 backdrop-blur-md shadow-md border-purple-100 py-1 sm:py-2.5'
+          : 'bg-white border-purple-100/60 py-1.5 sm:py-3.5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-4">
           {/* Logo Left */}
           <div onClick={() => handleNavClick('home')} className="shrink-0">
             <Logo />
@@ -111,26 +118,26 @@ export const Header: React.FC<HeaderProps> = ({ activePage, setActivePage }) => 
             </button>
           </div>
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Actions: Compact Get Involved button & Nav Toggle */}
           <div className="flex items-center gap-1 sm:gap-2 xl:hidden shrink-0">
             {isAdmin && (
               <button
                 onClick={handleAdminAccess}
-                className="p-1.5 sm:p-2 rounded-lg text-purple-900 bg-purple-100/70 cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-lg text-purple-900 bg-purple-100/80 hover:bg-purple-200 cursor-pointer flex items-center justify-center"
                 title="CMS Admin"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             )}
             <button
               onClick={() => handleNavClick('get-involved')}
-              className="sm:hidden px-2.5 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider text-white bg-purple-700 cursor-pointer whitespace-nowrap"
+              className="sm:hidden px-2.5 py-1 rounded-lg font-extrabold text-[9px] uppercase tracking-wider text-white bg-gradient-to-r from-purple-700 to-indigo-800 hover:from-purple-800 hover:to-indigo-900 shadow-xs cursor-pointer whitespace-nowrap active:scale-95 transition-all"
             >
               GET INVOLVED
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 sm:p-2 rounded-xl text-purple-950 hover:bg-purple-50 transition-colors cursor-pointer"
+              className="p-1 sm:p-1.5 rounded-lg text-purple-950 hover:bg-purple-100/80 transition-colors cursor-pointer flex items-center justify-center"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}

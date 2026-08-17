@@ -59,13 +59,15 @@ export const ImpactPage: React.FC = () => {
           {impactStories.map((story) => (
             <div
               key={story.id}
-              className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+              className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between hardware-accelerated"
             >
               <div>
-                <div className="h-48 relative overflow-hidden bg-purple-100">
+                <div className="h-48 relative overflow-hidden bg-purple-100 hardware-accelerated">
                   <img
                     src={story.image || undefined}
                     alt={story.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
