@@ -8,20 +8,19 @@ interface EventsPageProps {
 }
 
 export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) => {
-  const { events, siteContent } = useCms();
+  const { events = [], siteContent } = useCms();
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
 
   const featuredEvent =
-    events.find((e) => e.isFeatured) ||
-    (siteContent.featuredEvent && events.some((e) => e.id === siteContent.featuredEvent?.id)
+    (events || []).find((e) => Boolean(e?.isFeatured)) ||
+    (siteContent?.featuredEvent && (events || []).some((e) => e?.id === siteContent.featuredEvent?.id)
       ? siteContent.featuredEvent
       : null) ||
-    events[0] ||
     null;
-  const otherEvents = featuredEvent ? events.filter((e) => e.id !== featuredEvent.id) : events;
+  const otherEvents = featuredEvent ? (events || []).filter((e) => e?.id !== featuredEvent.id) : (events || []);
 
-  const upcomingEvents = otherEvents.filter((e) => e.status === 'upcoming');
-  const pastEvents = otherEvents.filter((e) => e.status === 'past');
+  const upcomingEvents = otherEvents.filter((e) => e?.status === 'upcoming');
+  const pastEvents = otherEvents.filter((e) => e?.status === 'past');
 
   return (
     <div className="space-y-16 pb-16">
@@ -29,13 +28,13 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
       <section className="bg-gradient-to-br from-purple-900 via-purple-950 to-indigo-950 text-white py-16 rounded-b-3xl shadow-lg relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 text-center space-y-4 relative z-10">
           <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-800/80 px-3.5 py-1 rounded-full border border-purple-600">
-            EVENTS & FESTIVALS
+            EVENTS & PROGRAMS
           </span>
           <h1 className="text-4xl sm:text-5xl font-extrabold font-display leading-tight">
-            Youth Gatherings & Festivals
+            Events & Workshops
           </h1>
           <p className="text-base sm:text-lg text-purple-200 font-medium max-w-2xl mx-auto">
-            Interactive forums, mental wellness sessions, and youth festivals uniting changemakers across Bangladesh.
+            Interactive workshops, community forums, and advocacy sessions uniting changemakers across Bangladesh.
           </p>
         </div>
       </section>
@@ -49,7 +48,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
               <div className="lg:col-span-7 p-8 sm:p-12 space-y-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-800 text-purple-200 text-xs font-bold uppercase tracking-wider border border-purple-600">
                   <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                  <span>FEATURED FLAGSHIP FESTIVAL</span>
+                  <span>FEATURED EVENT</span>
                 </div>
 
                 <h2 className="text-3xl sm:text-4xl font-extrabold font-display leading-tight text-white">
@@ -79,7 +78,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
                 {featuredEvent.highlights && featuredEvent.highlights.length > 0 && (
                   <div className="pt-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-purple-300 mb-3">
-                      Festival Highlights & Key Segments
+                      Event Highlights & Key Segments
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {featuredEvent.highlights.map((hl, i) => (
@@ -163,6 +162,18 @@ export const EventsPage: React.FC<EventsPageProps> = ({ onOpenRegisterModal }) =
             </button>
           </div>
         </div>
+
+        {((activeTab === 'all' && events.length === 0) ||
+          (activeTab === 'upcoming' && upcomingEvents.length === 0) ||
+          (activeTab === 'past' && pastEvents.length === 0)) && (
+          <div className="text-center py-16 px-4 bg-purple-50/50 rounded-3xl border border-dashed border-purple-200">
+            <Calendar className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-purple-950">No Events Found</h3>
+            <p className="text-sm text-gray-500 max-w-md mx-auto mt-1">
+              There are currently no events listed in this category. Stay tuned for upcoming youth programs and workshops!
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {(activeTab === 'all' || activeTab === 'upcoming') &&

@@ -131,7 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Sparkles className="w-4 h-4 text-purple-600" />
                 <span>Admin Access Status:</span>
               </div>
-              {currentUser.email?.trim().toLowerCase() === 'mdanontosunny1068@mail.com' || currentUser.email?.trim().toLowerCase() === 'mdanontosunny1068@gmail.com' ? (
+              {String(currentUser.email || '').trim().toLowerCase() === 'mdanontosunny1068@mail.com' || String(currentUser.email || '').trim().toLowerCase() === 'mdanontosunny1068@gmail.com' ? (
                 <p className="text-gray-600">
                   Super Admin Account. You have full, permanent administrative access to the Admin Panel and Firestore controls.
                 </p>

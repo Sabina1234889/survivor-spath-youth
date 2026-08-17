@@ -31,15 +31,18 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenProgramModal,
   onOpenInvolvementModal,
 }) => {
-  const { siteContent, events, teamMembers, isLoading } = useCms();
-  const { hero, whoWeAre, focusAreas, stats, cta } = siteContent;
+  const { siteContent, events = [], teamMembers = [], isLoading } = useCms();
+  const hero = siteContent?.hero || { headline: '', headlineHighlight: '', subheadline: '', bgImage: '' };
+  const whoWeAre = siteContent?.whoWeAre || { title: '', description: '', bullet1: '', bullet2: '', bullet3: '', image: '' };
+  const focusAreas = siteContent?.focusAreas || [];
+  const stats = siteContent?.stats || [];
+  const cta = siteContent?.cta || { title: '', description: '' };
 
   const featuredEvent =
-    events.find((e) => e.isFeatured) ||
-    (siteContent.featuredEvent && events.some((e) => e.id === siteContent.featuredEvent?.id)
+    (events || []).find((e) => Boolean(e?.isFeatured)) ||
+    (siteContent?.featuredEvent && (events || []).some((e) => e?.id === siteContent.featuredEvent?.id)
       ? siteContent.featuredEvent
       : null) ||
-    events[0] ||
     null;
 
   const getFocusIcon = (iconName: string) => {
@@ -197,36 +200,38 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* ================= IMPACT IN NUMBERS ================= */}
-      <section className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white py-16 lg:py-20 rounded-3xl max-w-7xl mx-auto my-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-900/80 px-3.5 py-1.5 rounded-full border border-purple-700">
-              VERIFIED IMPACT
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
-              OUR IMPACT IN NUMBERS
-            </h2>
-            <p className="text-purple-200 text-base">
-              Quantifiable progress in creating safer communities, expanding youth leadership, and providing critical support.
-            </p>
-          </div>
+      {stats && stats.length > 0 && (
+        <section className="bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white py-16 lg:py-20 rounded-3xl max-w-7xl mx-auto my-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+            <div className="text-center space-y-3 max-w-2xl mx-auto">
+              <span className="text-xs font-bold uppercase tracking-widest text-purple-300 bg-purple-900/80 px-3.5 py-1.5 rounded-full border border-purple-700">
+                VERIFIED IMPACT
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
+                OUR IMPACT IN NUMBERS
+              </h2>
+              <p className="text-purple-200 text-base">
+                Quantifiable progress in creating safer communities, expanding youth leadership, and providing critical support.
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, idx) => (
-              <div
-                key={idx}
-                className="bg-purple-900/40 backdrop-blur-md p-8 rounded-2xl border border-purple-700/50 text-center space-y-3 hover:border-purple-400/80 transition-colors group"
-              >
-                <div className="text-4xl sm:text-5xl font-black font-display text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-200 group-hover:scale-105 transition-transform">
-                  {stat.value}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map((stat, idx) => (
+                <div
+                  key={idx}
+                  className="bg-purple-900/40 backdrop-blur-md p-8 rounded-2xl border border-purple-700/50 text-center space-y-3 hover:border-purple-400/80 transition-colors group"
+                >
+                  <div className="text-4xl sm:text-5xl font-black font-display text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-200 group-hover:scale-105 transition-transform">
+                    {stat.value}
+                  </div>
+                  <div className="text-base font-bold text-white">{stat.label}</div>
+                  <p className="text-purple-200/80 text-xs">{stat.description}</p>
                 </div>
-                <div className="text-base font-bold text-white">{stat.label}</div>
-                <p className="text-purple-200/80 text-xs">{stat.description}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ================= FEATURED EVENT ================= */}
       {featuredEvent && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CORE_VALUES, OBJECTIVES, KEY_ACTIVITIES } from '../../data/mockData';
+import { CORE_VALUES, OBJECTIVES, KEY_ACTIVITIES } from '../../data/constants';
 import { PartnersSection } from '../PartnersSection';
 import {
   Scale,

@@ -89,7 +89,7 @@ export const Footer: React.FC<FooterProps> = ({ setActivePage }) => {
                   onClick={() => handleNav('events')}
                   className="hover:text-white transition-colors cursor-pointer"
                 >
-                  Youth Fest & Events
+                  Events & Programs
                 </button>
               </li>
               <li>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Lock, Upload, CheckCircle2, FileText, MapPin, Loader2 } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
-import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/mockData';
+import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/constants';
 import { compressImage } from '../../utils/imageCompressor';
 
 export const ComplaintBoxPage: React.FC = () => {

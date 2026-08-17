@@ -22,26 +22,30 @@ export const TeamPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'slider' | 'grid'>('slider');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
+  const safeTeamMembers = teamMembers || [];
+
   // Dedicated list of Chief Advisors (members tagged as Chief Advisor)
-  const chiefAdvisors = teamMembers.filter((m) => {
+  const chiefAdvisors = safeTeamMembers.filter((m) => {
+    if (!m) return false;
     const cats = getMemberCategories(m);
-    return cats.some((c) => c.toLowerCase() === 'chief advisor');
+    return cats.some((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() === 'chief advisor'));
   });
 
   // Regular operational team members (excluding exclusive Chief Advisors)
-  const regularTeamMembers = teamMembers.filter((m) => {
+  const regularTeamMembers = safeTeamMembers.filter((m) => {
+    if (!m) return false;
     const cats = getMemberCategories(m);
-    return !cats.every((c) => c.toLowerCase() === 'chief advisor');
+    return !cats.every((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() === 'chief advisor'));
   });
 
   // Combine managed categories for regular team members (excluding Chief Advisor tab)
   const categoriesList = Array.from(
     new Set([
       'ALL',
-      ...(teamCategories || []).filter((c) => c.toLowerCase() !== 'chief advisor'),
+      ...(teamCategories || []).filter((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() !== 'chief advisor')),
       ...regularTeamMembers
         .flatMap((m) => getMemberCategories(m))
-        .filter((c) => c.toLowerCase() !== 'chief advisor'),
+        .filter((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() !== 'chief advisor')),
     ])
   );
 
@@ -51,14 +55,15 @@ export const TeamPage: React.FC = () => {
     activeCategory === 'ALL'
       ? regularTeamMembers
       : regularTeamMembers.filter((m) => {
+          if (!m) return false;
           const cats = getMemberCategories(m);
-          return cats.some((c) => c.toLowerCase() === activeCategory.toLowerCase());
+          return cats.some((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() === (activeCategory || '').toLowerCase()));
         });
 
   const getCategoryCount = (cat: string) => {
     if (cat === 'ALL') return regularTeamMembers.length;
     return regularTeamMembers.filter((m) =>
-      getMemberCategories(m).some((c) => c.toLowerCase() === cat.toLowerCase())
+      Boolean(m && getMemberCategories(m).some((c) => Boolean(c && typeof c === 'string' && c.toLowerCase() === (cat || '').toLowerCase())))
     ).length;
   };
 
@@ -138,7 +143,7 @@ export const TeamPage: React.FC = () => {
           <div className="hidden sm:block">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none py-1.5 scroll-smooth flex-nowrap">
               {categoriesList.map((cat) => {
-                const isActive = activeCategory.toLowerCase() === cat.toLowerCase();
+                const isActive = Boolean(activeCategory && cat && activeCategory.toLowerCase() === cat.toLowerCase());
                 return (
                   <button
                     key={cat}
@@ -236,7 +241,7 @@ export const TeamPage: React.FC = () => {
               {/* Category Options List */}
               <div className="overflow-y-auto max-h-[55vh] space-y-1.5 pr-1 no-scrollbar">
                 {categoriesList.map((cat) => {
-                  const isActive = activeCategory.toLowerCase() === cat.toLowerCase();
+                  const isActive = Boolean(activeCategory && cat && activeCategory.toLowerCase() === cat.toLowerCase());
                   const count = getCategoryCount(cat);
                   return (
                     <button

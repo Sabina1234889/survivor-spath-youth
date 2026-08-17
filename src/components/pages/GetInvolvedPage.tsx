@@ -34,7 +34,7 @@ export const GetInvolvedPage: React.FC<GetInvolvedPageProps> = ({ onOpenInvolvem
       type: 'Sponsor an Event',
       title: 'Sponsor an Event',
       description:
-        'Corporations, donors, and foundations can sponsor flagship youth events like Youth Fest 2026, providing gift kits, venue support, and educational literature.',
+        'Corporations, donors, and foundations can sponsor flagship youth events, community forums, and conferences, providing gift kits, venue support, and educational literature.',
       icon: <Building className="w-8 h-8 text-purple-600" />,
       buttonText: 'Become a Sponsor',
     },

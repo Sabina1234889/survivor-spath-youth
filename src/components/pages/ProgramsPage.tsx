@@ -26,12 +26,14 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ onOpenProgramModal }
   ];
 
   const filteredPrograms = programs.filter((prog) => {
+    const q = (searchTerm || '').trim().toLowerCase();
     const matchesSearch =
-      prog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prog.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());
+      !q ||
+      (prog.title && prog.title.toLowerCase().includes(q)) ||
+      (prog.shortDescription && prog.shortDescription.toLowerCase().includes(q));
     const matchesCategory =
       selectedCategory === 'ALL' || prog.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    return Boolean(matchesSearch) && matchesCategory;
   });
 
   return (

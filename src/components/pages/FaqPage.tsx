@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FAQS } from '../../data/mockData';
+import { FAQS } from '../../data/constants';
 import { Search, ChevronDown, HelpCircle } from 'lucide-react';
 
 export const FaqPage: React.FC = () => {
@@ -10,11 +10,13 @@ export const FaqPage: React.FC = () => {
   const categories = ['ALL', 'GENERAL', 'EVENTS', 'VOLUNTEERING', 'PARTNERSHIP', 'COMPLAINT BOX'];
 
   const filteredFaqs = FAQS.filter((item) => {
+    const q = (searchTerm || '').trim().toLowerCase();
     const matchesSearch =
-      item.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.answer.toLowerCase().includes(searchTerm.toLowerCase());
+      !q ||
+      (item.question && item.question.toLowerCase().includes(q)) ||
+      (item.answer && item.answer.toLowerCase().includes(q));
     const matchesCat = selectedCategory === 'ALL' || item.category === selectedCategory;
-    return matchesSearch && matchesCat;
+    return Boolean(matchesSearch) && matchesCat;
   });
 
   const toggleFaq = (id: string) => {

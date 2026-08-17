@@ -5,6 +5,7 @@ import { X, Save, RotateCcw, Layout, Users, BarChart3, Calendar, PhoneCall, Spar
 export const AdminCmsModal: React.FC = () => {
   const {
     siteContent,
+    events,
     updateHero,
     updateWhoWeAre,
     updateFocusAreas,
@@ -334,154 +335,234 @@ export const AdminCmsModal: React.FC = () => {
           {/* TAB 4: IMPACT STATS */}
           {activeTab === 'stats' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
-                Edit Verified Impact Statistics (4 Counters)
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {siteContent.stats.map((stat, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-2xl border border-purple-200 bg-purple-50/50 space-y-2"
-                  >
-                    <div className="text-xs font-bold text-purple-800 uppercase">
-                      Statistic #{idx + 1}
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={stat.value}
-                        onChange={(e) => {
-                          const next = [...siteContent.stats];
-                          next[idx].value = e.target.value;
-                          updateStats(next);
-                        }}
-                        className="w-24 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-purple-950 focus:ring-2 focus:ring-purple-600 outline-none bg-white"
-                        placeholder="e.g. 132+"
-                      />
-                      <input
-                        type="text"
-                        value={stat.label}
-                        onChange={(e) => {
-                          const next = [...siteContent.stats];
-                          next[idx].label = e.target.value;
-                          updateStats(next);
-                        }}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:ring-2 focus:ring-purple-600 outline-none bg-white"
-                        placeholder="Label"
-                      />
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={stat.description}
-                      onChange={(e) => {
-                        const next = [...siteContent.stats];
-                        next[idx].description = e.target.value;
-                        updateStats(next);
-                      }}
-                      className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:ring-2 focus:ring-purple-600 outline-none bg-white"
-                      placeholder="Short Description"
-                    />
-                  </div>
-                ))}
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
+                  Edit Verified Impact Statistics
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [...(siteContent.stats || []), { value: '0+', label: 'New Stat', description: 'Description' }];
+                    updateStats(next);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Counter</span>
+                </button>
               </div>
+
+              {(!siteContent.stats || siteContent.stats.length === 0) ? (
+                <div className="text-center py-8 bg-purple-50/50 rounded-2xl border border-dashed border-purple-200 p-4">
+                  <p className="text-xs text-gray-600 mb-2">No impact statistic counters configured.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = [{ value: '0+', label: 'Stat Title', description: 'Short description' }];
+                      updateStats(next);
+                    }}
+                    className="px-3 py-1.5 bg-purple-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-purple-800"
+                  >
+                    + Add First Statistic
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {siteContent.stats.map((stat, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl border border-purple-200 bg-purple-50/50 space-y-2 relative"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-bold text-purple-800 uppercase">
+                          Statistic #{idx + 1}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = siteContent.stats.filter((_, i) => i !== idx);
+                            updateStats(next);
+                          }}
+                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={stat.value}
+                          onChange={(e) => {
+                            const next = [...siteContent.stats];
+                            next[idx].value = e.target.value;
+                            updateStats(next);
+                          }}
+                          className="w-24 px-3 py-1.5 rounded-lg border border-gray-300 text-sm font-bold text-purple-950 focus:ring-2 focus:ring-purple-600 outline-none bg-white"
+                          placeholder="e.g. 132+"
+                        />
+                        <input
+                          type="text"
+                          value={stat.label}
+                          onChange={(e) => {
+                            const next = [...siteContent.stats];
+                            next[idx].label = e.target.value;
+                            updateStats(next);
+                          }}
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-bold focus:ring-2 focus:ring-purple-600 outline-none bg-white"
+                          placeholder="Label"
+                        />
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={stat.description}
+                        onChange={(e) => {
+                          const next = [...siteContent.stats];
+                          next[idx].description = e.target.value;
+                          updateStats(next);
+                        }}
+                        className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs focus:ring-2 focus:ring-purple-600 outline-none bg-white"
+                        placeholder="Short Description"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* TAB 5: FEATURED EVENT */}
           {activeTab === 'event' && (() => {
-            const currentFeatEvent = siteContent.featuredEvent || {
-              id: 'event-youth-fest-2026',
-              title: 'SURVIVOR’S PATH YOUTH FEST 2026',
-              date: '21 August 2026',
-              location: 'Jessore, Bangladesh',
-              shortDescription: 'A flagship youth-focused festival celebrating empowerment.',
-              fullDescription: '',
-              isFeatured: true,
-              image: '',
-              status: 'upcoming' as const,
-            };
+            const currentFeatEvent = siteContent.featuredEvent;
             return (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
-                  Edit Flagship Featured Event
-                </h3>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Event Title
-                  </label>
-                  <input
-                    type="text"
-                    value={currentFeatEvent.title}
-                    onChange={(e) =>
-                      updateFeaturedEvent({ ...currentFeatEvent, title: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                  />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase text-purple-900 tracking-wider">
+                    Homepage Flagship Event Banner
+                  </h3>
+                  {currentFeatEvent && (
+                    <button
+                      type="button"
+                      onClick={() => updateFeaturedEvent(null)}
+                      className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                    >
+                      Disable Event Banner
+                    </button>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {events.length > 0 ? (
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                      Event Date
+                      Select Event for Flagship Banner
                     </label>
-                    <input
-                      type="text"
-                      value={currentFeatEvent.date}
-                      onChange={(e) =>
-                        updateFeaturedEvent({ ...currentFeatEvent, date: e.target.value })
-                      }
-                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                    />
+                    <select
+                      value={currentFeatEvent?.id || ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        if (!selectedId) {
+                          updateFeaturedEvent(null);
+                        } else {
+                          const ev = events.find((item) => item.id === selectedId);
+                          if (ev) updateFeaturedEvent(ev);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none bg-white font-medium"
+                    >
+                      <option value="">-- No Featured Banner (Hidden) --</option>
+                      {events.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.title} ({ev.date})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      value={currentFeatEvent.location}
-                      onChange={(e) =>
-                        updateFeaturedEvent({
-                          ...currentFeatEvent,
-                          location: e.target.value,
-                        })
-                      }
-                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                    />
+                ) : (
+                  <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 text-xs text-purple-900">
+                    No events exist in database yet. Create an event in the Events manager first.
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Short Description
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={currentFeatEvent.shortDescription}
-                    onChange={(e) =>
-                      updateFeaturedEvent({
-                        ...currentFeatEvent,
-                        shortDescription: e.target.value,
-                      })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                  />
-                </div>
+                {currentFeatEvent ? (
+                  <div className="space-y-4 pt-2 border-t border-purple-100">
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                        Banner Event Title
+                      </label>
+                      <input
+                        type="text"
+                        value={currentFeatEvent.title}
+                        onChange={(e) =>
+                          updateFeaturedEvent({ ...currentFeatEvent, title: e.target.value })
+                        }
+                        className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                    Image URL
-                  </label>
-                  <input
-                    type="text"
-                    value={currentFeatEvent.image}
-                    onChange={(e) =>
-                      updateFeaturedEvent({ ...currentFeatEvent, image: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
-                  />
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                          Event Date
+                        </label>
+                        <input
+                          type="text"
+                          value={currentFeatEvent.date}
+                          onChange={(e) =>
+                            updateFeaturedEvent({ ...currentFeatEvent, date: e.target.value })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                          Location
+                        </label>
+                        <input
+                          type="text"
+                          value={currentFeatEvent.location}
+                          onChange={(e) =>
+                            updateFeaturedEvent({
+                              ...currentFeatEvent,
+                              location: e.target.value,
+                            })
+                          }
+                          className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                        Short Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={currentFeatEvent.shortDescription}
+                        onChange={(e) =>
+                          updateFeaturedEvent({
+                            ...currentFeatEvent,
+                            shortDescription: e.target.value,
+                          })
+                        }
+                        className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                        Image URL
+                      </label>
+                      <input
+                        type="text"
+                        value={currentFeatEvent.image || ''}
+                        onChange={(e) =>
+                          updateFeaturedEvent({ ...currentFeatEvent, image: e.target.value })
+                        }
+                        className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             );
           })()}

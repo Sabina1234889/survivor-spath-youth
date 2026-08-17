@@ -137,12 +137,15 @@ export function getMemberCategories(
 ): string[] {
   if (!member) return [];
   if (Array.isArray(member.categories) && member.categories.length > 0) {
-    return member.categories.map((c) => c.trim()).filter(Boolean);
+    return member.categories
+      .filter((c): c is string => typeof c === 'string')
+      .map((c) => c.trim())
+      .filter(Boolean);
   }
   if (member.category && typeof member.category === 'string') {
     return member.category
       .split(',')
-      .map((c) => c.trim())
+      .map((c) => (typeof c === 'string' ? c.trim() : ''))
       .filter(Boolean);
   }
   return [];

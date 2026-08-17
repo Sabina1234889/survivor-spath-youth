@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { OFFICIAL_STATS } from '../../data/mockData';
 import { useCms } from '../../context/CmsContext';
 import { ImpactStory } from '../../types';
 import { CheckCircle2, Shield, Heart, ArrowRight, X } from 'lucide-react';
@@ -7,7 +6,7 @@ import { CheckCircle2, Shield, Heart, ArrowRight, X } from 'lucide-react';
 export const ImpactPage: React.FC = () => {
   const { siteContent, impactStories } = useCms();
   const [selectedStory, setSelectedStory] = useState<ImpactStory | null>(null);
-  const statsToDisplay = siteContent?.stats && siteContent.stats.length > 0 ? siteContent.stats : OFFICIAL_STATS;
+  const statsToDisplay = siteContent?.stats || [];
 
   return (
     <div className="space-y-16 pb-16">
@@ -27,22 +26,24 @@ export const ImpactPage: React.FC = () => {
       </section>
 
       {/* Large Visual Statistics */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statsToDisplay.map((stat, idx) => (
-            <div
-              key={idx}
-              className="bg-white p-8 rounded-3xl border border-purple-100 shadow-sm text-center space-y-3 hover:border-purple-300 transition-all hover:-translate-y-1"
-            >
-              <div className="text-5xl font-black font-display text-purple-900">
-                {stat.value}
+      {statsToDisplay && statsToDisplay.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statsToDisplay.map((stat, idx) => (
+              <div
+                key={idx}
+                className="bg-white p-8 rounded-3xl border border-purple-100 shadow-sm text-center space-y-3 hover:border-purple-300 transition-all hover:-translate-y-1"
+              >
+                <div className="text-5xl font-black font-display text-purple-900">
+                  {stat.value}
+                </div>
+                <h3 className="text-base font-bold text-purple-950">{stat.label}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">{stat.description}</p>
               </div>
-              <h3 className="text-base font-bold text-purple-950">{stat.label}</h3>
-              <p className="text-xs text-gray-600 leading-relaxed">{stat.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Impact Stories */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -55,48 +56,54 @@ export const ImpactPage: React.FC = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {impactStories.map((story) => (
-            <div
-              key={story.id}
-              className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between hardware-accelerated"
-            >
-              <div>
-                <div className="h-48 relative overflow-hidden bg-purple-100 hardware-accelerated">
-                  <img
-                    src={story.image || undefined}
-                    alt={story.title}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="absolute top-3 left-3 bg-purple-900 text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">
-                    {story.category}
-                  </span>
+        {impactStories.length === 0 ? (
+          <div className="text-center py-12 bg-purple-50/50 rounded-2xl border border-dashed border-purple-200">
+            <p className="text-gray-500 text-sm">No impact stories published yet. Case studies and community impact reports will appear here.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {impactStories.map((story) => (
+              <div
+                key={story.id}
+                className="bg-white rounded-2xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between hardware-accelerated"
+              >
+                <div>
+                  <div className="h-48 relative overflow-hidden bg-purple-100 hardware-accelerated">
+                    <img
+                      src={story.image || undefined}
+                      alt={story.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="absolute top-3 left-3 bg-purple-900 text-white text-[10px] font-bold uppercase px-2.5 py-1 rounded-full">
+                      {story.category}
+                    </span>
+                  </div>
+
+                  <div className="p-6 space-y-3">
+                    <span className="text-xs font-bold text-purple-700">{story.location}</span>
+                    <h3 className="text-lg font-bold text-purple-950 leading-snug">
+                      {story.title}
+                    </h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">{story.summary}</p>
+                  </div>
                 </div>
 
-                <div className="p-6 space-y-3">
-                  <span className="text-xs font-bold text-purple-700">{story.location}</span>
-                  <h3 className="text-lg font-bold text-purple-950 leading-snug">
-                    {story.title}
-                  </h3>
-                  <p className="text-xs text-gray-600 leading-relaxed">{story.summary}</p>
+                <div className="p-6 pt-0">
+                  <button
+                    onClick={() => setSelectedStory(story)}
+                    className="w-full py-2.5 rounded-xl border border-purple-200 text-xs font-bold uppercase tracking-wider text-purple-800 hover:bg-purple-700 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>Read Full Case Study</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-
-              <div className="p-6 pt-0">
-                <button
-                  onClick={() => setSelectedStory(story)}
-                  className="w-full py-2.5 rounded-xl border border-purple-200 text-xs font-bold uppercase tracking-wider text-purple-800 hover:bg-purple-700 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>Read Full Case Study</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* MAKING CHANGE THROUGH ACTION SECTION */}

@@ -6,6 +6,8 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  getDocs,
+  writeBatch,
   onSnapshot,
 } from 'firebase/firestore';
 import {
@@ -35,14 +37,8 @@ import {
 import {
   OFFICIAL_STATS,
   FOCUS_AREAS,
-  FEATURED_EVENT,
-  EVENTS as INITIAL_EVENTS,
-  INITIAL_EVENT_ATTENDEES,
-  PROGRAMS as INITIAL_PROGRAMS,
   DEFAULT_TEAM_CATEGORIES,
-  IMPACT_STORIES as INITIAL_IMPACT_STORIES,
-  INITIAL_USER_ACCOUNTS,
-} from '../data/mockData';
+} from '../data/constants';
 import { safeLocalStorageSet } from '../utils/imageCompressor';
 
 const DEFAULT_SOCIAL_LINKS: SocialLinks = {
@@ -76,7 +72,7 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   },
   focusAreas: FOCUS_AREAS,
   stats: OFFICIAL_STATS,
-  featuredEvent: FEATURED_EVENT,
+  featuredEvent: null,
   cta: {
     headline: '“Your Voice Can Create Change.”',
     description:
@@ -95,134 +91,37 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   socialLinks: DEFAULT_SOCIAL_LINKS,
 };
 
-const INITIAL_COMPLAINTS: ComplaintItem[] = [
-  {
-    id: 'COMP-2026-001',
-    dateSubmitted: '2026-08-05',
-    category: 'School Harassment',
-    subject: 'Unaddressed safety issue on campus premises',
-    description:
-      'I filed a report with our campus safety committee last month regarding verbal harassment near the auditorium. Requesting confidential support and institutional followup.',
-    fullName: 'Anonymous Complainant',
-    institution: 'Jessore Model College',
-    division: 'Khulna',
-    district: 'Jessore',
-    status: 'Pending',
-    urgencyLevel: 'Critical',
-    attachmentName: 'incident_notes_redacted.pdf',
-    attachmentUrl: 'https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&q=80&w=1000',
-    adminNotes: 'Assigned to Legal Aid & School Outreach Committee for review.',
-  },
-  {
-    id: 'COMP-2026-002',
-    dateSubmitted: '2026-08-02',
-    category: 'Cyber Harassment',
-    subject: 'Unconsented photo distribution on social media',
-    description:
-      'A fake Facebook page was created using photos taken without consent. Need legal advice on cyber crime reporting in Bangladesh and platform takedown steps.',
-    fullName: 'Farhana Akter',
-    emailOrPhone: 'farhana.a@example.com',
-    institution: 'Dhaka City College',
-    division: 'Dhaka',
-    district: 'Dhaka',
-    status: 'In Review',
-    urgencyLevel: 'Urgent',
-    attachmentName: 'screenshot_evidence.png',
-    attachmentUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1000',
-    adminNotes: 'Cyber safety unit contacted; drafted takedown notice template.',
-  },
-  {
-    id: 'COMP-2026-003',
-    dateSubmitted: '2026-07-28',
-    category: 'Institutional Request',
-    subject: 'Request for school workshop on consent and safety',
-    description:
-      'Our student council requests Survivor’s Path Youth to host an interactive awareness session for 300+ students on rights, boundaries, and safe reporting.',
-    fullName: 'Student Council President',
-    emailOrPhone: '+880 1711-223344',
-    institution: 'Khulna Public School & College',
-    division: 'Khulna',
-    district: 'Khulna',
-    status: 'Resolved',
-    urgencyLevel: 'Standard',
-    adminNotes: 'Workshop scheduled for September 2026; trainer assigned.',
-  },
-];
-
-const INITIAL_INBOX_ITEMS: InboxItem[] = [
-  {
-    id: 'INB-2026-001',
-    dateSubmitted: '2026-08-08',
-    category: 'General Messages',
-    name: 'Tanvir Hossain',
-    email: 'tanvir.h@example.com',
-    phone: '+880 1711-223344',
-    organizationOrSchool: 'Dhaka University',
-    subjectOrRole: 'Inquiry regarding upcoming Youth Fest 2026 registration',
-    districtOrLocation: 'Dhaka',
-    message:
-      'Hello Survivor’s Path Youth team! I am a student at DU interested in attending the Youth Fest 2026 workshop. Could you please share details on how students can register?',
-    status: 'New',
-  },
-  {
-    id: 'INB-2026-002',
-    dateSubmitted: '2026-08-07',
-    category: 'Volunteer Applications',
-    name: 'Nusrat Jahan',
-    email: 'nusrat.j@example.com',
-    phone: '+880 1822-334455',
-    organizationOrSchool: 'Jessore Government Girls School',
-    subjectOrRole: 'Youth Volunteer Advocate',
-    districtOrLocation: 'Jessore',
-    message:
-      'I want to advocate for safe school campuses in Jessore. I have prior experience leading student clubs and organizing peer awareness drives.',
-    status: 'New',
-  },
-  {
-    id: 'INB-2026-003',
-    dateSubmitted: '2026-08-06',
-    category: 'Partnership & Sponsorships',
-    name: 'Kazi Rayhan',
-    email: 'kazi.rayhan@partner-ngo.org',
-    phone: '+880 1933-445566',
-    organizationOrSchool: 'Youth Action Bangladesh',
-    subjectOrRole: 'Institutional Co-Sponsorship Proposal',
-    districtOrLocation: 'Dhaka',
-    message:
-      'We would love to co-sponsor the upcoming legal literacy drives and provide educational booklets for 500+ participants.',
-    status: 'In Review',
-    adminNotes: 'Contacted partnership lead for follow-up call.',
-  },
-  {
-    id: 'INB-2026-004',
-    dateSubmitted: '2026-08-05',
-    category: 'School Collaborations',
-    name: 'Principal Mahfuzur Rahman',
-    email: 'principal@khulnamodel.edu.bd',
-    phone: '+880 1744-556677',
-    organizationOrSchool: 'Khulna Model Higher Secondary School',
-    subjectOrRole: 'Campus Consent & Safety Workshop Request',
-    districtOrLocation: 'Khulna',
-    message:
-      'We request Survivor’s Path Youth to conduct an interactive cyber safety & anti-harassment session for our Grade 9-12 students next month.',
-    status: 'Replied',
-    adminNotes: 'Session scheduled for September 12.',
-  },
-  {
-    id: 'INB-2026-005',
-    dateSubmitted: '2026-08-04',
-    category: 'Volunteer Applications',
-    name: 'Arif Chowdhury',
-    email: 'arif.c@example.com',
-    phone: '+880 1655-667788',
-    organizationOrSchool: 'Chittagong College',
-    subjectOrRole: 'Digital Media & Campaign Volunteer',
-    districtOrLocation: 'Chittagong',
-    message:
-      'I specialize in graphic design and social media strategy. I would love to support Survivor’s Path Youth digital campaigns.',
-    status: 'New',
-  },
-];
+// Storage Cache Version for Clean Slate
+const CACHE_VERSION = 'spy_cms_clean_v7_zero_auto_inbox';
+try {
+  const currentVer = localStorage.getItem('spy_cms_cache_ver');
+  if (currentVer !== CACHE_VERSION) {
+    const legacyKeys = [
+      'complaints',
+      'complaint_list',
+      'demo_complaints',
+      'support_requests',
+      'spy_cms_events',
+      'spy_cms_programs',
+      'spy_cms_team',
+      'spy_cms_partners',
+      'spy_cms_complaints',
+      'spy_cms_inbox',
+      'spy_cms_event_attendees',
+      'spy_cms_impact_stories',
+      'staff_list',
+      'spy_cms_site_content',
+    ];
+    legacyKeys.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch (e) {}
+    });
+    localStorage.setItem('spy_cms_cache_ver', CACHE_VERSION);
+  }
+} catch (e) {
+  console.warn('Cache busting check:', e);
+}
 
 interface CmsContextType {
   siteContent: SiteContent;
@@ -250,7 +149,7 @@ interface CmsContextType {
   updateWhoWeAre: (data: Partial<SiteContent['whoWeAre']>) => void;
   updateFocusAreas: (areas: FocusAreaItem[]) => void;
   updateStats: (stats: StatItem[]) => void;
-  updateFeaturedEvent: (event: EventItem) => void;
+  updateFeaturedEvent: (event: EventItem | null) => void;
   updateCta: (data: Partial<SiteContent['cta']>) => void;
   updateContactInfo: (data: Partial<SiteContent['contactInfo']>) => void;
   updateSocialLinks: (data: Partial<SocialLinks>) => void;
@@ -271,7 +170,7 @@ interface CmsContextType {
   addEvent: (event: Omit<EventItem, 'id'>) => void;
   updateEvent: (id: string, eventData: Partial<EventItem>) => void;
   deleteEvent: (id: string) => void;
-  toggleFeaturedEvent: (id: string) => void;
+  toggleFeaturedEvent: (id: string | null) => void;
   addEventAttendee: (attendee: Omit<EventAttendee, 'id' | 'registrationDate'>) => void;
   deleteEventAttendee: (id: string) => void;
   getAttendeesForEvent: (eventId: string) => EventAttendee[];
@@ -300,12 +199,14 @@ interface CmsContextType {
   updateComplaintStatus: (id: string, status: 'Pending' | 'In Review' | 'Resolved') => void;
   updateComplaintNotes: (id: string, notes: string) => void;
   deleteComplaint: (id: string) => void;
+  clearAllComplaints: () => Promise<void>;
 
   // Inbox CRUD & Actions
   addInboxItem: (item: Omit<InboxItem, 'id' | 'dateSubmitted' | 'status'> & { id?: string; dateSubmitted?: string; status?: InboxItem['status'] }) => void;
   updateInboxStatus: (id: string, status: InboxItem['status']) => void;
   updateInboxNotes: (id: string, notes: string) => void;
   deleteInboxItem: (id: string) => void;
+  clearAllInboxItems: () => Promise<void>;
 
   // Impact Stories CRUD
   addImpactStory: (story: Omit<ImpactStory, 'id'>) => void;
@@ -341,21 +242,27 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [events, setEvents] = useState<EventItem[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_events');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_EVENTS;
+    return [];
   });
 
   const [programs, setPrograms] = useState<ProgramItem[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_programs');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_PROGRAMS;
+    return [];
   });
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
@@ -400,41 +307,53 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [complaints, setComplaints] = useState<ComplaintItem[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_complaints');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_COMPLAINTS;
+    return [];
   });
 
   const [inboxItems, setInboxItems] = useState<InboxItem[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_inbox');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_INBOX_ITEMS;
+    return [];
   });
 
   const [eventAttendees, setEventAttendees] = useState<EventAttendee[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_event_attendees');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_EVENT_ATTENDEES;
+    return [];
   });
 
   const [impactStories, setImpactStories] = useState<ImpactStory[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_impact_stories');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_IMPACT_STORIES;
+    return [];
   });
 
   const [users, setUsers] = useState<UserAccount[]>(() => {
@@ -450,21 +369,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           'sadia.r@yahoo.com',
         ];
         const cleaned = parsed.filter(
-          (u) => !legacyEmails.includes(u.email.toLowerCase())
+          (u) => Boolean(u && u.email && !legacyEmails.includes(u.email.toLowerCase()))
         );
-
-        const result = [...cleaned];
-        for (const superUser of INITIAL_USER_ACCOUNTS) {
-          if (!result.some((u) => u.email.toLowerCase() === superUser.email.toLowerCase())) {
-            result.unshift(superUser);
-          }
-        }
-        return result;
+        return cleaned;
       }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_USER_ACCOUNTS;
+    return [];
   });
 
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
@@ -523,19 +435,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setInboxItems(items);
         safeLocalStorageSet('spy_cms_inbox', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_inbox');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: InboxItem) => {
-                if (item.id) setDoc(doc(db, 'inbox', item.id), item).catch(() => {});
-              });
-              setInboxItems(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setInboxItems([]);
         safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
       }
@@ -547,19 +446,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setComplaints(items);
         safeLocalStorageSet('spy_cms_complaints', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_complaints');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: ComplaintItem) => {
-                if (item.id) setDoc(doc(db, 'complaints', item.id), item).catch(() => {});
-              });
-              setComplaints(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setComplaints([]);
         safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
       }
@@ -571,19 +457,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setEvents(items);
         safeLocalStorageSet('spy_cms_events', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_events');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: EventItem) => {
-                if (item.id) setDoc(doc(db, 'events', item.id), item).catch(() => {});
-              });
-              setEvents(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setEvents([]);
         safeLocalStorageSet('spy_cms_events', JSON.stringify([]));
       }
@@ -595,19 +468,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setEventAttendees(items);
         safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_event_attendees');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: EventAttendee) => {
-                if (item.id) setDoc(doc(db, 'event_attendees', item.id), item).catch(() => {});
-              });
-              setEventAttendees(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setEventAttendees([]);
         safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify([]));
       }
@@ -619,19 +479,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTeamMembers(items);
         safeLocalStorageSet('spy_cms_team', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_team');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: TeamMember) => {
-                if (item.id) setDoc(doc(db, 'team', item.id), item).catch(() => {});
-              });
-              setTeamMembers(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setTeamMembers([]);
         safeLocalStorageSet('spy_cms_team', JSON.stringify([]));
       }
@@ -644,20 +491,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPartners(unique);
         safeLocalStorageSet('spy_cms_partners', JSON.stringify(unique));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_partners');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: PartnerLogo) => {
-                const partnerId = item.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                setDoc(doc(db, 'partners', partnerId), item).catch(() => {});
-              });
-              setPartners(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setPartners([]);
         safeLocalStorageSet('spy_cms_partners', JSON.stringify([]));
       }
@@ -669,19 +502,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPrograms(items);
         safeLocalStorageSet('spy_cms_programs', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_programs');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: ProgramItem) => {
-                if (item.id) setDoc(doc(db, 'programs', item.id), item).catch(() => {});
-              });
-              setPrograms(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setPrograms([]);
         safeLocalStorageSet('spy_cms_programs', JSON.stringify([]));
       }
@@ -693,19 +513,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setImpactStories(items);
         safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(items));
       } else {
-        try {
-          const saved = localStorage.getItem('spy_cms_impact_stories');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              parsed.forEach((item: ImpactStory) => {
-                if (item.id) setDoc(doc(db, 'impact_stories', item.id), item).catch(() => {});
-              });
-              setImpactStories(parsed);
-              return;
-            }
-          }
-        } catch (e) {}
         setImpactStories([]);
         safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify([]));
       }
@@ -714,7 +521,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as UserAccount[];
-        setUsers(Array.from(new Map(items.map((it) => [it.id, it])).values()));
+        const unique = Array.from(new Map(items.map((it) => [it.id, it])).values());
+        setUsers(unique);
+        safeLocalStorageSet('spy_cms_users', JSON.stringify(unique));
+      } else {
+        setUsers([]);
+        safeLocalStorageSet('spy_cms_users', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore users listener notice:', err));
 
@@ -957,13 +769,19 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ...(e.id === event.id ? event : {}),
         }))
       );
+    } else {
+      setEvents((prev) => prev.map((e) => ({ ...e, isFeatured: false })));
     }
     if (db) {
       try {
-        await setDoc(doc(db, 'content', 'homepage'), {
-          featuredEvent: event,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
+        await setDoc(
+          doc(db, 'content', 'homepage'),
+          {
+            featuredEvent: event,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
         if (event && event.id) {
           await updateDoc(doc(db, 'events', event.id), { ...event, isFeatured: true });
         }
@@ -1208,16 +1026,51 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleFeaturedEvent = async (id: string) => {
+  const toggleFeaturedEvent = async (id: string | null) => {
+    if (!id) {
+      const updatedEvents = events.map((e) => ({ ...e, isFeatured: false }));
+      setEvents(updatedEvents);
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
+      updateFeaturedEvent(null);
+      if (db) {
+        for (const e of updatedEvents) {
+          try {
+            await updateDoc(doc(db, 'events', e.id), { isFeatured: false });
+          } catch (err) {
+            console.error('Firestore unset isFeatured error:', err);
+          }
+        }
+      }
+      return;
+    }
+
     const target = events.find((e) => e.id === id);
-    if (target) {
+    if (!target) return;
+
+    if (target.isFeatured) {
+      // Toggle off!
+      const updatedEvents = events.map((e) =>
+        e.id === id ? { ...e, isFeatured: false } : e
+      );
+      setEvents(updatedEvents);
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
+      updateFeaturedEvent(null);
+
+      if (db) {
+        try {
+          await updateDoc(doc(db, 'events', id), { isFeatured: false });
+        } catch (err) {
+          console.error('Firestore toggleOff error:', err);
+        }
+      }
+    } else {
+      // Set as featured
       const updatedEvents = events.map((e) => ({
         ...e,
         isFeatured: e.id === id,
       }));
       setEvents(updatedEvents);
       safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
-
       const newFeatured = { ...target, isFeatured: true };
       updateFeaturedEvent(newFeatured);
 
@@ -1510,6 +1363,21 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const clearAllComplaints = async () => {
+    setComplaints([]);
+    safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
+    if (db) {
+      try {
+        const snap = await getDocs(collection(db, 'complaints'));
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      } catch (e) {
+        console.error('Firestore clearAllComplaints error:', e);
+      }
+    }
+  };
+
   // Inbox CRUD & Actions
   const addInboxItem = async (
     item: Omit<InboxItem, 'id' | 'dateSubmitted' | 'status'> & {
@@ -1573,6 +1441,21 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await deleteDoc(doc(db, 'inbox', id));
       } catch (e) {
         console.error('Firestore deleteInboxItem error:', e);
+      }
+    }
+  };
+
+  const clearAllInboxItems = async () => {
+    setInboxItems([]);
+    safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
+    if (db) {
+      try {
+        const snap = await getDocs(collection(db, 'inbox'));
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      } catch (e) {
+        console.error('Firestore clearAllInboxItems error:', e);
       }
     }
   };
@@ -1771,16 +1654,16 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (
       currentUser &&
       (currentUser.id === userIdOrEmail ||
-        currentUser.email.trim().toLowerCase() === cleanTarget)
+        (currentUser.email && currentUser.email.trim().toLowerCase() === cleanTarget))
     ) {
       logoutUser();
     }
   };
 
   const addApprovedAdminEmail = async (email: string) => {
-    const clean = email.trim().toLowerCase();
+    const clean = String(email || '').trim().toLowerCase();
     if (!clean) return;
-    if (approvedAdminEmails.includes(clean)) return;
+    if (approvedAdminEmails.map((a) => String(a || '').trim().toLowerCase()).includes(clean)) return;
 
     const newList = [...approvedAdminEmails, clean];
     setApprovedAdminEmails(newList);
@@ -1795,8 +1678,8 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeApprovedAdminEmail = async (email: string) => {
-    const clean = email.trim().toLowerCase();
-    const newList = approvedAdminEmails.filter((e) => e !== clean);
+    const clean = String(email || '').trim().toLowerCase();
+    const newList = approvedAdminEmails.filter((e) => String(e || '').trim().toLowerCase() !== clean);
     setApprovedAdminEmails(newList);
     safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(newList));
     if (db) {
@@ -1810,16 +1693,16 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetToDefaults = () => {
     setSiteContent(DEFAULT_SITE_CONTENT);
-    setEvents(INITIAL_EVENTS);
-    setEventAttendees(INITIAL_EVENT_ATTENDEES);
-    setPrograms(INITIAL_PROGRAMS);
+    setEvents([]);
+    setEventAttendees([]);
+    setPrograms([]);
     setTeamMembers([]);
     setTeamCategories(DEFAULT_TEAM_CATEGORIES);
     setPartners([]);
-    setComplaints(INITIAL_COMPLAINTS);
-    setInboxItems(INITIAL_INBOX_ITEMS);
-    setImpactStories(INITIAL_IMPACT_STORIES);
-    setUsers(INITIAL_USER_ACCOUNTS);
+    setComplaints([]);
+    setInboxItems([]);
+    setImpactStories([]);
+    setUsers([]);
     setCurrentUser(null);
     try {
       localStorage.removeItem('spy_cms_siteContent');
@@ -1840,9 +1723,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const userEmailClean = currentUser?.email?.trim().toLowerCase() || '';
+  const userEmailClean = String(currentUser?.email || '').trim().toLowerCase();
   const isSuperAdmin = userEmailClean === 'mdanontosunny1068@mail.com' || userEmailClean === 'mdanontosunny1068@gmail.com';
-  const isApprovedAdmin = approvedAdminEmails.includes(userEmailClean);
+  const isApprovedAdmin = Boolean(userEmailClean && approvedAdminEmails.map((a) => String(a || '').trim().toLowerCase()).includes(userEmailClean));
 
   const isAdmin = Boolean(currentUser && (isSuperAdmin || isApprovedAdmin));
 
@@ -1900,10 +1783,12 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateComplaintStatus,
         updateComplaintNotes,
         deleteComplaint,
+        clearAllComplaints,
         addInboxItem,
         updateInboxStatus,
         updateInboxNotes,
         deleteInboxItem,
+        clearAllInboxItems,
         addImpactStory,
         updateImpactStory,
         deleteImpactStory,

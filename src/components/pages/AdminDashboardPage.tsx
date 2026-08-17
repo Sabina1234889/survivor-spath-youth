@@ -4,7 +4,7 @@ import { doc, setDoc, getDoc, collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase';
 import { useCms } from '../../context/CmsContext';
 import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole, getMemberCategories } from '../../types';
-import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/mockData';
+import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/constants';
 import {
   LayoutDashboard,
   FileText,
@@ -342,10 +342,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     updateComplaintStatus,
     updateComplaintNotes,
     deleteComplaint,
+    clearAllComplaints,
     addInboxItem,
     updateInboxStatus,
     updateInboxNotes,
     deleteInboxItem,
+    clearAllInboxItems,
     impactStories,
     addImpactStory,
     updateImpactStory,
@@ -798,33 +800,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
   const filteredInboxItems = inboxItems.filter((item) => {
     const matchesCategory = item.category === inboxCategoryTab;
     const matchesStatus = inboxStatusFilter === 'All' || item.status === inboxStatusFilter;
-    const searchLower = inboxSearch.toLowerCase();
+    if (!inboxSearch.trim()) return matchesCategory && matchesStatus;
+    const searchLower = inboxSearch.trim().toLowerCase();
     const matchesSearch =
-      !inboxSearch ||
-      item.name.toLowerCase().includes(searchLower) ||
-      item.email.toLowerCase().includes(searchLower) ||
+      (item.name && item.name.toLowerCase().includes(searchLower)) ||
+      (item.email && item.email.toLowerCase().includes(searchLower)) ||
       (item.phone && item.phone.toLowerCase().includes(searchLower)) ||
       (item.organizationOrSchool && item.organizationOrSchool.toLowerCase().includes(searchLower)) ||
       (item.subjectOrRole && item.subjectOrRole.toLowerCase().includes(searchLower)) ||
-      item.message.toLowerCase().includes(searchLower);
+      (item.message && item.message.toLowerCase().includes(searchLower));
 
-    return matchesCategory && matchesStatus && matchesSearch;
+    return matchesCategory && matchesStatus && Boolean(matchesSearch);
   });
 
   const filteredComplaints = complaints.filter((c) => {
+    const searchLower = (complaintSearch || '').trim().toLowerCase();
     const matchesSearch =
-      c.subject.toLowerCase().includes(complaintSearch.toLowerCase()) ||
-      c.category.toLowerCase().includes(complaintSearch.toLowerCase()) ||
-      (c.institution && c.institution.toLowerCase().includes(complaintSearch.toLowerCase())) ||
-      (c.fullName && c.fullName.toLowerCase().includes(complaintSearch.toLowerCase())) ||
-      (c.division && c.division.toLowerCase().includes(complaintSearch.toLowerCase())) ||
-      (c.district && c.district.toLowerCase().includes(complaintSearch.toLowerCase()));
+      !searchLower ||
+      (c.subject && c.subject.toLowerCase().includes(searchLower)) ||
+      (c.category && c.category.toLowerCase().includes(searchLower)) ||
+      (c.institution && c.institution.toLowerCase().includes(searchLower)) ||
+      (c.fullName && c.fullName.toLowerCase().includes(searchLower)) ||
+      (c.division && c.division.toLowerCase().includes(searchLower)) ||
+      (c.district && c.district.toLowerCase().includes(searchLower)) ||
+      (c.description && c.description.toLowerCase().includes(searchLower));
 
     const matchesStatusFilter = complaintFilter === 'All' || c.status === complaintFilter;
     const matchesDivisionFilter = complaintDivisionFilter === 'All' || c.division === complaintDivisionFilter;
     const matchesDistrictFilter = complaintDistrictFilter === 'All' || c.district === complaintDistrictFilter;
 
-    return matchesSearch && matchesStatusFilter && matchesDivisionFilter && matchesDistrictFilter;
+    return Boolean(matchesSearch) && matchesStatusFilter && matchesDivisionFilter && matchesDistrictFilter;
   });
 
   const handleSaveEvent = async (e: React.FormEvent) => {
@@ -874,7 +879,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
     if (customCategoryName.trim()) {
       const newCat = customCategoryName.trim();
-      if (!currentCategories.some((c) => c.toLowerCase() === newCat.toLowerCase())) {
+      if (!currentCategories.some((c) => c && typeof c === 'string' && c.toLowerCase() === newCat.toLowerCase())) {
         currentCategories.push(newCat);
       }
       await addTeamCategory(newCat);
@@ -1271,9 +1276,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <BookOpen className="w-4 h-4 text-purple-300" />
                 <span>Impact Stories</span>
               </div>
-              <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
-                {impactStories.length}
-              </span>
+              {impactStories.length > 0 ? (
+                <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
+                  {impactStories.length}
+                </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+              )}
             </button>
 
             <button
@@ -1291,9 +1300,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <Calendar className="w-4 h-4 text-purple-300" />
                 <span>Events & Programs</span>
               </div>
-              <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
-                {events.length}
-              </span>
+              {events.length > 0 ? (
+                <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
+                  {events.length}
+                </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+              )}
             </button>
 
             <button
@@ -1321,10 +1334,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     {newInboxCount} New
                   </span>
                 </div>
-              ) : (
+              ) : inboxItems.length > 0 ? (
                 <span className="text-[10px] bg-purple-900/80 text-purple-300 px-2 py-0.5 rounded-md font-bold">
                   {inboxItems.length}
                 </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
               )}
             </button>
 
@@ -1353,10 +1368,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     {pendingComplaintsCount} Pending
                   </span>
                 </div>
-              ) : (
+              ) : complaints.length > 0 ? (
                 <span className="text-[10px] bg-purple-900/80 text-purple-300 px-2 py-0.5 rounded-md font-bold">
                   {complaints.length}
                 </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
               )}
             </button>
 
@@ -1375,7 +1392,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <Users className="w-4 h-4 text-purple-300" />
                 <span>Team & Partners</span>
               </div>
-              <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+              {teamMembers.length + partners.length > 0 ? (
+                <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
+                  {teamMembers.length + partners.length}
+                </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+              )}
             </button>
 
             <button
@@ -1393,9 +1416,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <ShieldCheck className="w-4 h-4 text-emerald-300" />
                 <span>Staff & Access</span>
               </div>
-              <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
-                {users.length}
-              </span>
+              {users.length > 0 ? (
+                <span className="text-[10px] bg-purple-900 px-2 py-0.5 rounded-md font-extrabold text-purple-200">
+                  {users.length}
+                </span>
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+              )}
             </button>
 
             <button
@@ -1711,7 +1738,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                       <Calendar className="w-5 h-5 text-purple-700 group-hover:scale-110 transition-transform" />
                       <div className="text-xs font-bold text-purple-950">Flagship Events</div>
                       <div className="text-[11px] text-gray-500">
-                        Manage Youth Fest 2026 & workshops
+                        Manage events, conferences & workshops
                       </div>
                     </button>
 
@@ -1931,89 +1958,131 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     Impact Statistics Controller
                   </h2>
                   <p className="text-xs text-gray-600">
-                    Live editable metrics displayed in animated counter cards on the home page (Persisted to Firestore: <code className="bg-purple-100 text-purple-900 px-1 py-0.5 rounded">stats/impact</code>)
+                    Live editable metrics displayed in animated counter cards on the home and impact pages (Persisted to Firestore: <code className="bg-purple-100 text-purple-900 px-1 py-0.5 rounded">stats/impact</code>)
                   </p>
                 </div>
-                <button
-                  onClick={async () => {
-                    try {
-                      await updateStats(siteContent.stats);
-                      alert('Impact statistics successfully saved and synced to Firestore (stats/impact)!');
-                    } catch (err: any) {
-                      alert('Failed to save impact stats: ' + (err?.message || 'Check connection'));
-                    }
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2 flex-shrink-0"
-                >
-                  <Save className="w-4 h-4 text-purple-300" />
-                  <span>Save Impact Stats to Firestore</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {siteContent.stats.map((stat, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white p-6 rounded-3xl border border-purple-200 shadow-xs space-y-4 relative"
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const next = [...(siteContent.stats || []), { value: '0+', label: 'New Metric', description: 'Description of metric' }];
+                      updateStats(next);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    <div className="flex items-center justify-between border-b border-purple-100 pb-3">
-                      <span className="text-xs font-extrabold uppercase text-purple-900 bg-purple-100 px-3 py-1 rounded-lg">
-                        Statistic Counter #{idx + 1}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                          Numeric Value (e.g. 132+, 86+)
-                        </label>
-                        <input
-                          type="text"
-                          value={stat.value}
-                          onChange={(e) => {
-                            const next = [...siteContent.stats];
-                            next[idx].value = e.target.value;
-                            updateStats(next);
-                          }}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-lg font-black text-purple-950 focus:ring-2 focus:ring-purple-600 outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                          Stat Label / Title
-                        </label>
-                        <input
-                          type="text"
-                          value={stat.label}
-                          onChange={(e) => {
-                            const next = [...siteContent.stats];
-                            next[idx].label = e.target.value;
-                            updateStats(next);
-                          }}
-                          className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
-                          Short Context Description
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={stat.description}
-                          onChange={(e) => {
-                            const next = [...siteContent.stats];
-                            next[idx].description = e.target.value;
-                            updateStats(next);
-                          }}
-                          className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs text-gray-700 focus:ring-2 focus:ring-purple-600 outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    <Plus className="w-4 h-4 text-purple-700" />
+                    <span>Add Metric</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await updateStats(siteContent.stats || []);
+                        alert('Impact statistics successfully saved and synced to Firestore (stats/impact)!');
+                      } catch (err: any) {
+                        alert('Failed to save impact stats: ' + (err?.message || 'Check connection'));
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2 flex-shrink-0"
+                  >
+                    <Save className="w-4 h-4 text-purple-300" />
+                    <span>Save Impact Stats</span>
+                  </button>
+                </div>
               </div>
+
+              {(!siteContent.stats || siteContent.stats.length === 0) ? (
+                <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-purple-200 p-8 space-y-4">
+                  <BarChart3 className="w-12 h-12 text-purple-300 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-gray-700">No impact metrics created yet.</p>
+                    <p className="text-xs text-gray-500">Add verified statistic counters to display dynamic metrics on the Home and Impact pages.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = [{ value: '0+', label: 'Metric Name', description: 'Brief description of impact achievement' }];
+                      updateStats(next);
+                    }}
+                    className="px-4 py-2 bg-purple-900 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-purple-800 transition-colors inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create First Metric</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {siteContent.stats.map((stat, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white p-6 rounded-3xl border border-purple-200 shadow-xs space-y-4 relative"
+                    >
+                      <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                        <span className="text-xs font-extrabold uppercase text-purple-900 bg-purple-100 px-3 py-1 rounded-lg">
+                          Statistic Counter #{idx + 1}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const next = siteContent.stats.filter((_, i) => i !== idx);
+                            updateStats(next);
+                          }}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Metric"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                            Numeric Value (e.g. 50+, 100+)
+                          </label>
+                          <input
+                            type="text"
+                            value={stat.value}
+                            onChange={(e) => {
+                              const next = [...siteContent.stats];
+                              next[idx].value = e.target.value;
+                              updateStats(next);
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-lg font-black text-purple-950 focus:ring-2 focus:ring-purple-600 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                            Stat Label / Title
+                          </label>
+                          <input
+                            type="text"
+                            value={stat.label}
+                            onChange={(e) => {
+                              const next = [...siteContent.stats];
+                              next[idx].label = e.target.value;
+                              updateStats(next);
+                            }}
+                            className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
+                            Short Context Description
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={stat.description}
+                            onChange={(e) => {
+                              const next = [...siteContent.stats];
+                              next[idx].description = e.target.value;
+                              updateStats(next);
+                            }}
+                            className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs text-gray-700 focus:ring-2 focus:ring-purple-600 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -2287,12 +2356,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           </td>
                           <td className="p-4">
                             {ev.isFeatured ? (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-fit">
-                                <Sparkles className="w-3 h-3" />
-                                <span>Homepage Flagship</span>
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-fit">
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Homepage Flagship</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleFeaturedEvent(ev.id)}
+                                  className="text-[10px] font-bold text-red-600 hover:text-red-800 hover:underline cursor-pointer"
+                                  title="Unset as featured flagship event banner"
+                                >
+                                  (Unset)
+                                </button>
+                              </div>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => toggleFeaturedEvent(ev.id)}
                                 className="text-[11px] font-bold text-purple-700 hover:underline cursor-pointer"
                               >
@@ -2366,12 +2446,30 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   </p>
                 </div>
 
-                {/* Top Quick Stats */}
+                {/* Top Quick Stats & Actions */}
                 <div className="flex items-center gap-2">
                   <div className="bg-purple-900 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span>{newInboxCount} New / Unread</span>
                   </div>
+                  {inboxItems.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to permanently delete all ${inboxItems.length} inbox submission(s) from Firestore and local storage?`)) {
+                          try {
+                            await clearAllInboxItems();
+                            alert('All inbox submissions have been successfully cleared.');
+                          } catch (e: any) {
+                            alert('Failed to clear inbox: ' + (e?.message || 'Check connection'));
+                          }
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear All Inbox</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2648,6 +2746,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     <option value="In Review">In Review</option>
                     <option value="Resolved">Resolved</option>
                   </select>
+
+                  {complaints.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to permanently delete all ${complaints.length} complaint record(s) from Firestore and local storage?`)) {
+                          try {
+                            await clearAllComplaints();
+                            alert('All complaints have been successfully cleared.');
+                          } catch (e: any) {
+                            alert('Failed to clear complaints: ' + (e?.message || 'Check connection'));
+                          }
+                        }
+                      }}
+                      className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear All Complaints</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2821,7 +2938,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   {teamCategories.map((category) => {
                     const memberCount = teamMembers.filter((m) =>
                       getMemberCategories(m).some(
-                        (c) => c.toLowerCase() === category.toLowerCase()
+                        (c) => Boolean(c && category && c.toLowerCase() === category.toLowerCase())
                       )
                     ).length;
 
@@ -3339,7 +3456,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
                     {/* Additional Approved Admins */}
                     {approvedAdminEmails
-                      .filter((e) => e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com')
+                      .filter((e) => Boolean(e && typeof e === 'string' && e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com'))
                       .map((email) => (
                         <div
                           key={email}
@@ -3381,7 +3498,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   <div>
                     <div className="text-[10px] font-extrabold uppercase text-purple-700 tracking-wider">Approved Admin Access</div>
                     <div className="text-2xl font-black text-purple-900 mt-1">
-                      {1 + approvedAdminEmails.filter((e) => e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com').length}
+                      {1 + approvedAdminEmails.filter((e) => Boolean(e && typeof e === 'string' && e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com')).length}
                     </div>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center border border-purple-200">
@@ -3393,7 +3510,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   <div>
                     <div className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Standard Accounts (No Admin)</div>
                     <div className="text-2xl font-black text-slate-900 mt-1">
-                      {users.filter(u => u.email.toLowerCase() !== 'mdanontosunny1068@mail.com' && !approvedAdminEmails.includes(u.email.toLowerCase())).length}
+                      {users.filter(u => {
+                        const email = String(u?.email || '').trim().toLowerCase();
+                        return email && email !== 'mdanontosunny1068@mail.com' && email !== 'mdanontosunny1068@gmail.com' && !approvedAdminEmails.map(a => String(a || '').trim().toLowerCase()).includes(email);
+                      }).length}
                     </div>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
@@ -3415,7 +3535,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   />
                 </div>
                 <div className="text-xs text-gray-500 font-semibold">
-                  Showing {users.filter(u => !userSearch || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase())).length} Accounts
+                  Showing {users.filter(u => {
+                    const q = (userSearch || '').trim().toLowerCase();
+                    return !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q));
+                  }).length} Accounts
                 </div>
               </div>
 
@@ -3435,32 +3558,32 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     <tbody className="divide-y divide-gray-100">
                       {users
                         .filter((u) => {
-                          const q = userSearch.toLowerCase();
-                          return !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+                          const q = (userSearch || '').trim().toLowerCase();
+                          return !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q));
                         })
                         .map((u) => {
                           const isSelf = u.id === currentUser?.id;
-                          const userCleanEmail = u.email.trim().toLowerCase();
+                          const userCleanEmail = (u.email || '').trim().toLowerCase();
                           const isSuper = userCleanEmail === 'mdanontosunny1068@mail.com' || userCleanEmail === 'mdanontosunny1068@gmail.com';
-                          const isApproved = approvedAdminEmails.includes(userCleanEmail);
+                          const isApproved = approvedAdminEmails.map(a => String(a || '').trim().toLowerCase()).includes(userCleanEmail);
 
                           return (
                             <tr key={u.id} className="hover:bg-purple-50/50 transition-colors">
                               <td className="p-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-900 font-black flex items-center justify-center text-sm border border-purple-200 shrink-0">
-                                    {u.name.charAt(0).toUpperCase()}
+                                    {(u.name || 'U').charAt(0).toUpperCase()}
                                   </div>
                                   <div>
                                     <div className="font-extrabold text-purple-950 text-sm flex items-center gap-2">
-                                      <span>{u.name}</span>
+                                      <span>{u.name || 'Anonymous User'}</span>
                                       {isSelf && (
-                                        <span className="px-2 py-0.5 rounded-full bg-purple-900 text-white text-[9px] font-black uppercase tracking-wider">
-                                          You (Active)
+                                        <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[9px] font-extrabold uppercase">
+                                          You
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-xs text-gray-500 font-medium">{u.email}</div>
+                                    <div className="text-[11px] text-gray-500 font-medium">{u.email || 'No email'}</div>
                                   </div>
                                 </div>
                               </td>
@@ -3653,12 +3776,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
               </div>
 
               {selectedComplaint.attachmentName && (() => {
+                const attName = (selectedComplaint.attachmentName || '').toLowerCase();
                 const fileImgUrl =
                   selectedComplaint.attachmentUrl ||
-                  (selectedComplaint.attachmentName.toLowerCase().includes('png') ||
-                   selectedComplaint.attachmentName.toLowerCase().includes('jpg') ||
-                   selectedComplaint.attachmentName.toLowerCase().includes('jpeg') ||
-                   selectedComplaint.attachmentName.toLowerCase().includes('screenshot')
+                  (attName.includes('png') ||
+                   attName.includes('jpg') ||
+                   attName.includes('jpeg') ||
+                   attName.includes('screenshot')
                     ? 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1000'
                     : 'https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&q=80&w=1000');
 
@@ -4928,10 +5052,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 Showing{' '}
                 {
                   getAttendeesForEvent(viewAttendeesEvent.id).filter((a) => {
-                    const q = attendeeSearch.toLowerCase();
+                    const q = (attendeeSearch || '').trim().toLowerCase();
                     return (
                       !q ||
-                      a.fullName.toLowerCase().includes(q) ||
+                      (a.fullName && a.fullName.toLowerCase().includes(q)) ||
                       (a.phone && a.phone.toLowerCase().includes(q)) ||
                       (a.email && a.email.toLowerCase().includes(q)) ||
                       (a.schoolOrInstitution && a.schoolOrInstitution.toLowerCase().includes(q)) ||
@@ -4971,10 +5095,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {getAttendeesForEvent(viewAttendeesEvent.id)
                         .filter((a) => {
-                          const q = attendeeSearch.toLowerCase();
+                          const q = (attendeeSearch || '').trim().toLowerCase();
                           return (
                             !q ||
-                            a.fullName.toLowerCase().includes(q) ||
+                            (a.fullName && a.fullName.toLowerCase().includes(q)) ||
                             (a.phone && a.phone.toLowerCase().includes(q)) ||
                             (a.email && a.email.toLowerCase().includes(q)) ||
                             (a.schoolOrInstitution && a.schoolOrInstitution.toLowerCase().includes(q)) ||
@@ -4984,7 +5108,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                         .map((att) => (
                           <tr key={att.id} className="hover:bg-purple-50/40 transition-colors">
                             <td className="p-3 font-bold text-purple-950">
-                              <div>{att.fullName}</div>
+                              <div>{att.fullName || 'Anonymous'}</div>
                             </td>
                             <td className="p-3 text-gray-700">
                               {att.phone && <div className="font-semibold">{att.phone}</div>}
