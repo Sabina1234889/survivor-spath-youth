@@ -56,7 +56,15 @@ import {
   AlertCircle,
   Tag,
   Check,
+  Loader2,
+  FileImage,
 } from 'lucide-react';
+import {
+  compressImage,
+  formatFileSize,
+  getBase64SizeInKb,
+  safeLocalStorageSet,
+} from '../../utils/imageCompressor';
 
 interface AdminDashboardPageProps {
   setActivePage: (page: PageId) => void;
@@ -68,6 +76,9 @@ interface ImageUploadFieldProps {
   onChange: (base64OrUrl: string) => void;
   required?: boolean;
   helpText?: string;
+  maxWidth?: number;
+  maxHeight?: number;
+  maxSizeKb?: number;
 }
 
 const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
@@ -75,51 +86,149 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   value,
   onChange,
   required = false,
-  helpText = 'Upload PNG, JPG, WEBP from device',
+  helpText = 'Upload PNG, JPG, WEBP from device (auto-compressed under 100KB)',
+  maxWidth = 700,
+  maxHeight = 700,
+  maxSizeKb = 90,
 }) => {
-  const handleFileChange = (file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        onChange(reader.result);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [compressionFeedback, setCompressionFeedback] = useState<{
+    originalKb: number;
+    compressedKb: number;
+    reduction: number;
+    format: string;
+  } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const currentSizeKb = value ? getBase64SizeInKb(value) : 0;
+
+  const handleProcessFile = async (file: File) => {
+    if (!file) return;
+    setErrorMessage(null);
+    setCompressionFeedback(null);
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please select a valid image file (JPG, PNG, WEBP, or SVG).');
+      return;
+    }
+
+    // Safety guard against massive files > 25MB
+    if (file.size > 25 * 1024 * 1024) {
+      setErrorMessage('Image is too large (>25MB). Please choose a smaller original image.');
+      return;
+    }
+
+    setIsCompressing(true);
+    try {
+      const result = await compressImage(file, {
+        maxWidth,
+        maxHeight,
+        maxSizeKb,
+      });
+
+      if (result.sizeKb > 150) {
+        setErrorMessage(
+          `Compressed image size (${formatFileSize(result.sizeKb)}) still exceeds limit. Please try an image with less detail or a smaller photo.`
+        );
       }
-    };
-    reader.readAsDataURL(file);
+
+      onChange(result.dataUrl);
+      setCompressionFeedback({
+        originalKb: result.originalSizeKb,
+        compressedKb: result.sizeKb,
+        reduction: result.reductionPercentage,
+        format: result.format.replace('image/', '').toUpperCase(),
+      });
+    } catch (err: any) {
+      console.error('Image compression failed:', err);
+      setErrorMessage(
+        err?.message || 'Failed to compress image. Please try another image file.'
+      );
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-bold uppercase text-gray-700">
-        {label} {required && <span className="text-rose-600">*</span>}
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-bold uppercase text-gray-700">
+          {label} {required && <span className="text-rose-600">*</span>}
+        </label>
+        {value && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+            currentSizeKb <= 100
+              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+              : 'bg-amber-100 text-amber-800 border border-amber-200'
+          }`}>
+            {formatFileSize(currentSizeKb)} • Safe Base64
+          </span>
+        )}
+      </div>
+
+      {errorMessage && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2 animate-in fade-in">
+          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">{errorMessage}</p>
+            <p className="text-[11px] text-rose-600 mt-0.5">Tip: Use JPG or WebP images for optimal lightweight storage.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(null)}
+            className="text-rose-400 hover:text-rose-600 text-xs font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(false);
         }}
         onDrop={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          setDragOver(false);
           if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileChange(e.dataTransfer.files[0]);
+            handleProcessFile(e.dataTransfer.files[0]);
           }
         }}
-        className="relative group p-4 rounded-2xl border-2 border-dashed border-purple-300 bg-purple-50/50 hover:bg-purple-100/70 hover:border-purple-500 transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4"
+        className={`relative group p-3.5 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-3.5 ${
+          dragOver
+            ? 'border-purple-600 bg-purple-100 scale-[1.01]'
+            : 'border-purple-300 bg-purple-50/50 hover:bg-purple-100/70 hover:border-purple-500'
+        }`}
       >
         <input
           type="file"
           accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml"
+          disabled={isCompressing}
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
-              handleFileChange(e.target.files[0]);
+              handleProcessFile(e.target.files[0]);
             }
           }}
-          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10 disabled:cursor-not-allowed"
           title="Click to upload photo from device"
         />
 
-        {value ? (
+        {isCompressing ? (
+          <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white flex flex-col items-center justify-center flex-shrink-0 shadow-md animate-pulse">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span className="text-[9px] font-bold mt-1">Shrinking</span>
+          </div>
+        ) : value ? (
           <div className="relative group/img w-16 h-16 rounded-2xl overflow-hidden border-2 border-purple-400 flex-shrink-0 shadow-xs bg-white">
             <img src={value || undefined} alt="Preview" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-purple-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
@@ -133,28 +242,51 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
         )}
 
         <div className="flex-1 min-w-0 text-center sm:text-left">
-          <div className="text-xs font-bold text-purple-950 group-hover:text-purple-800 flex items-center gap-1.5 justify-center sm:justify-start">
-            <Upload className="w-3.5 h-3.5 text-purple-700 flex-shrink-0" />
-            <span>Click to upload photo from device, or drag and drop</span>
-          </div>
-          <div className="text-[11px] text-gray-500 font-medium mt-0.5">
-            {helpText}
-          </div>
-          {value && (
-            <div className="text-[10px] font-bold text-emerald-700 mt-1 flex items-center gap-1 justify-center sm:justify-start">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              <span>Image loaded! Click or drop new file to replace.</span>
+          {isCompressing ? (
+            <div className="space-y-1">
+              <div className="text-xs font-extrabold text-purple-900 flex items-center gap-1.5 justify-center sm:justify-start">
+                <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
+                <span>Auto-compressing image under 100KB...</span>
+              </div>
+              <p className="text-[11px] text-purple-700 font-medium">
+                Resizing canvas & optimizing quality for free-tier storage safety.
+              </p>
             </div>
+          ) : (
+            <>
+              <div className="text-xs font-bold text-purple-950 group-hover:text-purple-800 flex items-center gap-1.5 justify-center sm:justify-start">
+                <Upload className="w-3.5 h-3.5 text-purple-700 flex-shrink-0" />
+                <span>Click to upload photo from device, or drag and drop</span>
+              </div>
+              <div className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {helpText}
+              </div>
+              {compressionFeedback && (
+                <div className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md mt-1 inline-flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-emerald-600" />
+                  <span>
+                    Reduced {formatFileSize(compressionFeedback.originalKb)} → {formatFileSize(compressionFeedback.compressedKb)} ({compressionFeedback.reduction}% saved, {compressionFeedback.format})
+                  </span>
+                </div>
+              )}
+              {!compressionFeedback && value && (
+                <div className="text-[10px] font-bold text-emerald-700 mt-1 flex items-center gap-1 justify-center sm:justify-start">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Image ready & optimized! Click or drop new file to replace.</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {value && (
+        {value && !isCompressing && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
               onChange('');
+              setCompressionFeedback(null);
             }}
             className="z-20 px-2.5 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors"
             title="Remove image"
@@ -818,13 +950,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
       await setDoc(doc(db, 'settings', 'general'), formData, { merge: true });
       await updateSystemSettings(settingsForm);
 
-      localStorage.setItem('spy_cms_siteContent', JSON.stringify(siteContent));
-      localStorage.setItem('spy_cms_events', JSON.stringify(events));
-      localStorage.setItem('spy_cms_programs', JSON.stringify(programs));
-      localStorage.setItem('spy_cms_team', JSON.stringify(teamMembers));
-      localStorage.setItem('spy_cms_partners', JSON.stringify(partners));
-      localStorage.setItem('spy_cms_complaints', JSON.stringify(complaints));
-      localStorage.setItem('spy_cms_inbox', JSON.stringify(inboxItems));
+      safeLocalStorageSet('spy_cms_siteContent', JSON.stringify(siteContent));
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(events));
+      safeLocalStorageSet('spy_cms_programs', JSON.stringify(programs));
+      safeLocalStorageSet('spy_cms_team', JSON.stringify(teamMembers));
+      safeLocalStorageSet('spy_cms_partners', JSON.stringify(partners));
+      safeLocalStorageSet('spy_cms_complaints', JSON.stringify(complaints));
+      safeLocalStorageSet('spy_cms_inbox', JSON.stringify(inboxItems));
 
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3500);

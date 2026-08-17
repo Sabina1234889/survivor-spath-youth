@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Upload, CheckCircle2, FileText, MapPin } from 'lucide-react';
+import { ShieldCheck, Lock, Upload, CheckCircle2, FileText, MapPin, Loader2 } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/mockData';
+import { compressImage } from '../../utils/imageCompressor';
 
 export const ComplaintBoxPage: React.FC = () => {
   const { addComplaint } = useCms();
@@ -9,6 +10,7 @@ export const ComplaintBoxPage: React.FC = () => {
   const [refCode, setRefCode] = useState('');
   const [fileName, setFileName] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [isCompressingFile, setIsCompressingFile] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -21,17 +23,41 @@ export const ComplaintBoxPage: React.FC = () => {
     description: '',
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setFileName(file.name);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setFileUrl(reader.result);
+
+      if (file.type.startsWith('image/')) {
+        setIsCompressingFile(true);
+        try {
+          const result = await compressImage(file, {
+            maxWidth: 900,
+            maxHeight: 900,
+            maxSizeKb: 85,
+          });
+          setFileUrl(result.dataUrl);
+        } catch (err) {
+          console.warn('Image compression fallback:', err);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+              setFileUrl(reader.result);
+            }
+          };
+          reader.readAsDataURL(file);
+        } finally {
+          setIsCompressingFile(false);
         }
-      };
-      reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            setFileUrl(reader.result);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -302,11 +328,20 @@ export const ComplaintBoxPage: React.FC = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="flex flex-col items-center justify-center space-y-1">
-                    <Upload className="w-5 h-5 text-purple-600" />
-                    <span className="text-xs text-purple-900 font-medium">
-                      {fileName ? fileName : 'Click or drop a file to attach'}
-                    </span>
-                    <span className="text-[10px] text-gray-400">PDF, PNG, JPG up to 10MB</span>
+                    {isCompressingFile ? (
+                      <>
+                        <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
+                        <span className="text-xs text-purple-900 font-bold">Optimizing image attachment...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 text-purple-600" />
+                        <span className="text-xs text-purple-900 font-medium">
+                          {fileName ? `${fileName} (Ready)` : 'Click or drop a file to attach'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">PNG, JPG, WEBP, PDF</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

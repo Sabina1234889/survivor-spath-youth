@@ -369,7 +369,7 @@ export const TeamPage: React.FC = () => {
           </div>
         )}
 
-        {/* ESTEEMED CHIEF ADVISORS DEDICATED CAROUSEL SECTION */}
+        {/* ESTEEMED CHIEF ADVISORS DEDICATED SECTION */}
         {chiefAdvisors.length > 0 && (
           <div className="pt-10 border-t border-purple-100/90 space-y-6">
             {/* Section Heading */}

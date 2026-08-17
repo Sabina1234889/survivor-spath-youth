@@ -45,6 +45,7 @@ import {
   IMPACT_STORIES as INITIAL_IMPACT_STORIES,
   INITIAL_USER_ACCOUNTS,
 } from '../data/mockData';
+import { safeLocalStorageSet } from '../utils/imageCompressor';
 
 const DEFAULT_SOCIAL_LINKS: SocialLinks = {
   facebook: 'https://facebook.com/survivorspathyouth',
@@ -506,88 +507,88 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubInbox = onSnapshot(collection(db, 'inbox'), (snapshot) => {
       if (snapshot.empty) {
         setInboxItems([]);
-        try { localStorage.setItem('spy_cms_inbox', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as InboxItem[];
         setInboxItems(items);
-        try { localStorage.setItem('spy_cms_inbox', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_inbox', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore inbox listener notice:', err));
 
     const unsubComplaints = onSnapshot(collection(db, 'complaints'), (snapshot) => {
       if (snapshot.empty) {
         setComplaints([]);
-        try { localStorage.setItem('spy_cms_complaints', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ComplaintItem[];
         setComplaints(items);
-        try { localStorage.setItem('spy_cms_complaints', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_complaints', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore complaints listener notice:', err));
 
     const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
       if (snapshot.empty) {
         setEvents([]);
-        try { localStorage.setItem('spy_cms_events', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_events', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventItem[];
         setEvents(items);
-        try { localStorage.setItem('spy_cms_events', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_events', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore events listener notice:', err));
 
     const unsubAttendees = onSnapshot(collection(db, 'event_attendees'), (snapshot) => {
       if (snapshot.empty) {
         setEventAttendees([]);
-        try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventAttendee[];
         setEventAttendees(items);
-        try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore attendees listener notice:', err));
 
     const unsubTeam = onSnapshot(collection(db, 'team'), (snapshot) => {
       if (snapshot.empty) {
         setTeamMembers([]);
-        try { localStorage.setItem('spy_cms_team', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_team', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as TeamMember[];
         setTeamMembers(items);
-        try { localStorage.setItem('spy_cms_team', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_team', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore team listener notice:', err));
 
     const unsubPartners = onSnapshot(collection(db, 'partners'), (snapshot) => {
       if (snapshot.empty) {
         setPartners([]);
-        try { localStorage.setItem('spy_cms_partners', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_partners', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as PartnerLogo[];
         setPartners(Array.from(new Map(items.map((it) => [it.name, it])).values()));
-        try { localStorage.setItem('spy_cms_partners', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_partners', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore partners listener notice:', err));
 
     const unsubPrograms = onSnapshot(collection(db, 'programs'), (snapshot) => {
       if (snapshot.empty) {
         setPrograms([]);
-        try { localStorage.setItem('spy_cms_programs', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_programs', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ProgramItem[];
         setPrograms(items);
-        try { localStorage.setItem('spy_cms_programs', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_programs', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore programs listener notice:', err));
 
     const unsubImpact = onSnapshot(collection(db, 'impact_stories'), (snapshot) => {
       if (snapshot.empty) {
         setImpactStories([]);
-        try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify([])); } catch (e) {}
+        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify([]));
       } else {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ImpactStory[];
         setImpactStories(items);
-        try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify(items)); } catch (e) {}
+        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore impact_stories listener notice:', err));
 
@@ -642,11 +643,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(data.emails)) {
           const cleanEmails = data.emails.map((e: string) => e.trim().toLowerCase());
           setApprovedAdminEmails(cleanEmails);
-          try {
-            localStorage.setItem('spy_cms_approved_admins', JSON.stringify(cleanEmails));
-          } catch (e) {
-            console.error(e);
-          }
+          safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(cleanEmails));
         }
       }
     }, (err) => console.warn('Firestore approved_admins listener notice:', err));
@@ -671,11 +668,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = docSnap.data();
         if (Array.isArray(data.categories) && data.categories.length > 0) {
           setTeamCategories(data.categories);
-          try {
-            localStorage.setItem('spy_cms_team_categories', JSON.stringify(data.categories));
-          } catch (e) {
-            console.error(e);
-          }
+          safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(data.categories));
         }
       }
     }, (err) => console.warn('Firestore team_categories listener notice:', err));
@@ -723,95 +716,50 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [users]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_siteContent', JSON.stringify(siteContent));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_siteContent', JSON.stringify(siteContent));
   }, [siteContent]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_events', JSON.stringify(events));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_events', JSON.stringify(events));
   }, [events]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_event_attendees', JSON.stringify(eventAttendees));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(eventAttendees));
   }, [eventAttendees]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_programs', JSON.stringify(programs));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_programs', JSON.stringify(programs));
   }, [programs]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_team', JSON.stringify(teamMembers));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_team', JSON.stringify(teamMembers));
   }, [teamMembers]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_partners', JSON.stringify(partners));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_partners', JSON.stringify(partners));
   }, [partners]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_complaints', JSON.stringify(complaints));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_complaints', JSON.stringify(complaints));
   }, [complaints]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_inbox', JSON.stringify(inboxItems));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_inbox', JSON.stringify(inboxItems));
   }, [inboxItems]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_impact_stories', JSON.stringify(impactStories));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(impactStories));
   }, [impactStories]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('spy_cms_users', JSON.stringify(users));
-      localStorage.setItem('staff_list', JSON.stringify(users));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_users', JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    try {
-      if (currentUser) {
-        localStorage.setItem('spy_cms_current_user', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('spy_cms_current_user');
-      }
-    } catch (e) {
-      console.error(e);
+    if (currentUser) {
+      safeLocalStorageSet('spy_cms_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('spy_cms_current_user');
     }
   }, [currentUser]);
 
@@ -1076,7 +1024,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return item;
       });
-      try { localStorage.setItem('spy_cms_events', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(updated));
       return updated;
     });
 
@@ -1108,7 +1056,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEvents((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       remainingEvents = updated;
-      try { localStorage.setItem('spy_cms_events', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(updated));
       return updated;
     });
 
@@ -1149,7 +1097,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isFeatured: e.id === id,
       }));
       setEvents(updatedEvents);
-      try { localStorage.setItem('spy_cms_events', JSON.stringify(updatedEvents)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
 
       const newFeatured = { ...target, isFeatured: true };
       updateFeaturedEvent(newFeatured);
@@ -1188,7 +1136,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteEventAttendee = async (id: string) => {
     setEventAttendees((prev) => {
       const updated = prev.filter((a) => a.id !== id);
-      try { localStorage.setItem('spy_cms_event_attendees', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1258,11 +1206,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updated = [...teamCategories, clean];
     setTeamCategories(updated);
-    try {
-      localStorage.setItem('spy_cms_team_categories', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(updated));
     if (db) {
       try {
         await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
@@ -1276,11 +1220,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const clean = categoryName.trim().toLowerCase();
     const updated = teamCategories.filter((cat) => cat.toLowerCase() !== clean);
     setTeamCategories(updated);
-    try {
-      localStorage.setItem('spy_cms_team_categories', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(updated));
     if (db) {
       try {
         await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
@@ -1293,11 +1233,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateTeamCategories = async (newCategories: string[]) => {
     const cleanList = newCategories.map((c) => c.trim()).filter(Boolean);
     setTeamCategories(cleanList);
-    try {
-      localStorage.setItem('spy_cms_team_categories', JSON.stringify(cleanList));
-    } catch (e) {
-      console.error(e);
-    }
+    safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(cleanList));
     if (db) {
       try {
         await setDoc(doc(db, 'settings', 'team_categories'), { categories: cleanList }, { merge: true });
@@ -1336,7 +1272,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteTeamMember = async (id: string) => {
     setTeamMembers((prev) => {
       const updated = prev.filter((item) => item.id !== id);
-      try { localStorage.setItem('spy_cms_team', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_team', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1380,7 +1316,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deletePartner = async (name: string) => {
     setPartners((prev) => {
       const updated = prev.filter((p) => p.name !== name);
-      try { localStorage.setItem('spy_cms_partners', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_partners', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1443,7 +1379,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteComplaint = async (id: string) => {
     setComplaints((prev) => {
       const updated = prev.filter((c) => c.id !== id);
-      try { localStorage.setItem('spy_cms_complaints', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_complaints', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1510,7 +1446,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteInboxItem = async (id: string) => {
     setInboxItems((prev) => {
       const updated = prev.filter((item) => item.id !== id);
-      try { localStorage.setItem('spy_cms_inbox', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_inbox', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1552,7 +1488,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteImpactStory = async (id: string) => {
     setImpactStories((prev) => {
       const updated = prev.filter((item) => item.id !== id);
-      try { localStorage.setItem('spy_cms_impact_stories', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(updated));
       return updated;
     });
     if (db) {
@@ -1701,12 +1637,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           u.id !== userIdOrEmail &&
           u.email.trim().toLowerCase() !== cleanTarget
       );
-      try {
-        localStorage.setItem('spy_cms_users', JSON.stringify(updated));
-        localStorage.setItem('staff_list', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
+      safeLocalStorageSet('spy_cms_users', JSON.stringify(updated));
       return updated;
     });
 
@@ -1734,13 +1665,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newList = [...approvedAdminEmails, clean];
     setApprovedAdminEmails(newList);
-    try {
-      localStorage.setItem('spy_cms_approved_admins', JSON.stringify(newList));
-      if (db) {
+    safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(newList));
+    if (db) {
+      try {
         await setDoc(doc(db, 'settings', 'approved_admins'), { emails: newList }, { merge: true });
+      } catch (e) {
+        console.error('Firestore addApprovedAdminEmail error:', e);
       }
-    } catch (e) {
-      console.error('Firestore addApprovedAdminEmail error:', e);
     }
   };
 
@@ -1748,13 +1679,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const clean = email.trim().toLowerCase();
     const newList = approvedAdminEmails.filter((e) => e !== clean);
     setApprovedAdminEmails(newList);
-    try {
-      localStorage.setItem('spy_cms_approved_admins', JSON.stringify(newList));
-      if (db) {
+    safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(newList));
+    if (db) {
+      try {
         await setDoc(doc(db, 'settings', 'approved_admins'), { emails: newList }, { merge: true });
+      } catch (e) {
+        console.error('Firestore removeApprovedAdminEmail error:', e);
       }
-    } catch (e) {
-      console.error('Firestore removeApprovedAdminEmail error:', e);
     }
   };
 
