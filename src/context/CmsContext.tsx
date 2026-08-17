@@ -39,9 +39,7 @@ import {
   EVENTS as INITIAL_EVENTS,
   INITIAL_EVENT_ATTENDEES,
   PROGRAMS as INITIAL_PROGRAMS,
-  TEAM_MEMBERS as INITIAL_TEAM,
   DEFAULT_TEAM_CATEGORIES,
-  PARTNER_LOGOS as INITIAL_PARTNERS,
   IMPACT_STORIES as INITIAL_IMPACT_STORIES,
   INITIAL_USER_ACCOUNTS,
 } from '../data/mockData';
@@ -508,103 +506,208 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Brief hydration period to allow initial local storage and firestore caches to settle seamlessly without layout shift
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 250);
-    return () => clearTimeout(timer);
+    // Instant hydration - no artificial setTimeout delays
+    setIsLoading(false);
   }, []);
 
-  // Sync to local storage
   // Sync to local storage & Firestore Realtime Sync
   useEffect(() => {
-    if (!db) return;
+    if (!db) {
+      setIsLoading(false);
+      return;
+    }
 
     const unsubInbox = onSnapshot(collection(db, 'inbox'), (snapshot) => {
-      if (snapshot.empty) {
-        setInboxItems([]);
-        safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as InboxItem[];
         setInboxItems(items);
         safeLocalStorageSet('spy_cms_inbox', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_inbox');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: InboxItem) => {
+                if (item.id) setDoc(doc(db, 'inbox', item.id), item).catch(() => {});
+              });
+              setInboxItems(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setInboxItems([]);
+        safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore inbox listener notice:', err));
 
     const unsubComplaints = onSnapshot(collection(db, 'complaints'), (snapshot) => {
-      if (snapshot.empty) {
-        setComplaints([]);
-        safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ComplaintItem[];
         setComplaints(items);
         safeLocalStorageSet('spy_cms_complaints', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_complaints');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: ComplaintItem) => {
+                if (item.id) setDoc(doc(db, 'complaints', item.id), item).catch(() => {});
+              });
+              setComplaints(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setComplaints([]);
+        safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore complaints listener notice:', err));
 
     const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
-      if (snapshot.empty) {
-        setEvents([]);
-        safeLocalStorageSet('spy_cms_events', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventItem[];
         setEvents(items);
         safeLocalStorageSet('spy_cms_events', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_events');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: EventItem) => {
+                if (item.id) setDoc(doc(db, 'events', item.id), item).catch(() => {});
+              });
+              setEvents(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setEvents([]);
+        safeLocalStorageSet('spy_cms_events', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore events listener notice:', err));
 
     const unsubAttendees = onSnapshot(collection(db, 'event_attendees'), (snapshot) => {
-      if (snapshot.empty) {
-        setEventAttendees([]);
-        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventAttendee[];
         setEventAttendees(items);
         safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_event_attendees');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: EventAttendee) => {
+                if (item.id) setDoc(doc(db, 'event_attendees', item.id), item).catch(() => {});
+              });
+              setEventAttendees(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setEventAttendees([]);
+        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore attendees listener notice:', err));
 
     const unsubTeam = onSnapshot(collection(db, 'team'), (snapshot) => {
-      if (snapshot.empty) {
-        setTeamMembers([]);
-        safeLocalStorageSet('spy_cms_team', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as TeamMember[];
         setTeamMembers(items);
         safeLocalStorageSet('spy_cms_team', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_team');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: TeamMember) => {
+                if (item.id) setDoc(doc(db, 'team', item.id), item).catch(() => {});
+              });
+              setTeamMembers(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setTeamMembers([]);
+        safeLocalStorageSet('spy_cms_team', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore team listener notice:', err));
 
     const unsubPartners = onSnapshot(collection(db, 'partners'), (snapshot) => {
-      if (snapshot.empty) {
+      if (!snapshot.empty) {
+        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as PartnerLogo[];
+        const unique = Array.from(new Map(items.map((it) => [it.name, it])).values());
+        setPartners(unique);
+        safeLocalStorageSet('spy_cms_partners', JSON.stringify(unique));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_partners');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: PartnerLogo) => {
+                const partnerId = item.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                setDoc(doc(db, 'partners', partnerId), item).catch(() => {});
+              });
+              setPartners(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
         setPartners([]);
         safeLocalStorageSet('spy_cms_partners', JSON.stringify([]));
-      } else {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as PartnerLogo[];
-        setPartners(Array.from(new Map(items.map((it) => [it.name, it])).values()));
-        safeLocalStorageSet('spy_cms_partners', JSON.stringify(items));
       }
     }, (err) => console.warn('Firestore partners listener notice:', err));
 
     const unsubPrograms = onSnapshot(collection(db, 'programs'), (snapshot) => {
-      if (snapshot.empty) {
-        setPrograms([]);
-        safeLocalStorageSet('spy_cms_programs', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ProgramItem[];
         setPrograms(items);
         safeLocalStorageSet('spy_cms_programs', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_programs');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: ProgramItem) => {
+                if (item.id) setDoc(doc(db, 'programs', item.id), item).catch(() => {});
+              });
+              setPrograms(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setPrograms([]);
+        safeLocalStorageSet('spy_cms_programs', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore programs listener notice:', err));
 
     const unsubImpact = onSnapshot(collection(db, 'impact_stories'), (snapshot) => {
-      if (snapshot.empty) {
-        setImpactStories([]);
-        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify([]));
-      } else {
+      if (!snapshot.empty) {
         const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ImpactStory[];
         setImpactStories(items);
         safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(items));
+      } else {
+        try {
+          const saved = localStorage.getItem('spy_cms_impact_stories');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              parsed.forEach((item: ImpactStory) => {
+                if (item.id) setDoc(doc(db, 'impact_stories', item.id), item).catch(() => {});
+              });
+              setImpactStories(parsed);
+              return;
+            }
+          }
+        } catch (e) {}
+        setImpactStories([]);
+        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify([]));
       }
     }, (err) => console.warn('Firestore impact_stories listener notice:', err));
 

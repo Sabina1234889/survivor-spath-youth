@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PROGRAMS } from '../../data/mockData';
+import { useCms } from '../../context/CmsContext';
 import { Search, ArrowRight } from 'lucide-react';
 
 interface ProgramsPageProps {
@@ -7,6 +7,7 @@ interface ProgramsPageProps {
 }
 
 export const ProgramsPage: React.FC<ProgramsPageProps> = ({ onOpenProgramModal }) => {
+  const { programs } = useCms();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
@@ -24,7 +25,7 @@ export const ProgramsPage: React.FC<ProgramsPageProps> = ({ onOpenProgramModal }
     'Advocacy',
   ];
 
-  const filteredPrograms = PROGRAMS.filter((prog) => {
+  const filteredPrograms = programs.filter((prog) => {
     const matchesSearch =
       prog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prog.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());

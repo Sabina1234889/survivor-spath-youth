@@ -464,125 +464,7 @@ export const DEFAULT_TEAM_CATEGORIES: string[] = [
   'Volunteers',
 ];
 
-export const TEAM_MEMBERS: TeamMember[] = [
-  {
-    id: 'team-founder',
-    name: 'Md Anonto Sunny',
-    role: 'Founder & Executive Director',
-    category: 'Founder',
-    categories: ['Founder', 'Core Team'],
-    bio: 'Pioneering youth activist and social impact strategist committed to creating safe spaces and advocating for survivor rights across Bangladesh.',
-    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
-    email: 'anonto.sunny@survivorspathyouth.org',
-    linkedin: 'https://linkedin.com',
-  },
-  {
-    id: 'team-advisor-1',
-    name: 'Advocate Farhana Rahman',
-    role: 'Chief Advisor - Legal & Policy',
-    category: 'Chief Advisor',
-    categories: ['Chief Advisor'],
-    bio: 'Senior Supreme Court practitioner and human rights advocate providing strategic guidance on legal aid, survivor advocacy, and institutional compliance.',
-    photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
-    email: 'farhana.rahman@survivorspathyouth.org',
-    linkedin: 'https://linkedin.com',
-  },
-  {
-    id: 'team-advisor-2',
-    name: 'Prof. Dr. Aminul Islam',
-    role: 'Chief Advisor - Public Health & Trauma Recovery',
-    category: 'Chief Advisor',
-    categories: ['Chief Advisor'],
-    bio: 'Renowned clinical psychologist and university professor specializing in adolescent trauma-informed care and community rehabilitation systems.',
-    photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80',
-    email: 'aminul.islam@survivorspathyouth.org',
-    linkedin: 'https://linkedin.com',
-  },
-  {
-    id: 'team-advisor-3',
-    name: 'Barrister Raisa Chowdhury',
-    role: 'Chief Advisor - Human Rights & Child Safeguarding',
-    category: 'Chief Advisor',
-    categories: ['Chief Advisor'],
-    bio: 'International human rights lawyer dedicated to child protection protocols, institutional reforms, and youth leadership empowerment initiatives.',
-    photo: 'https://images.unsplash.com/photo-1580894732488-8254b38d3810?auto=format&fit=crop&w=600&q=80',
-    email: 'raisa.chowdhury@survivorspathyouth.org',
-    linkedin: 'https://linkedin.com',
-  },
-  {
-    id: 'team-hr',
-    name: 'Sabrina Hasan',
-    role: 'Head of Human Resources & Safeguarding',
-    category: 'Human Resources',
-    categories: ['Human Resources', 'Core Team'],
-    bio: 'Organizational development specialist overseeing volunteer welfare, staff safeguarding policies, and ethical standards across all programs.',
-    photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80',
-    email: 'hr@survivorspathyouth.org',
-  },
-  {
-    id: 'team-core-1',
-    name: 'Tanvir Ahmed',
-    role: 'Core Team Member - Operations',
-    category: 'Core Team',
-    categories: ['Core Team'],
-    bio: 'Coordinates operational logistics, school outreach partnerships, and field campaign executions across division offices.',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-core-2',
-    name: 'Nusrat Jahan',
-    role: 'Core Team Member - Communications',
-    category: 'Core Team',
-    categories: ['Core Team'],
-    bio: 'Leads digital advocacy, public messaging, content strategies, and official institutional publications.',
-    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-prog-1',
-    name: 'Arafat Hossain',
-    role: 'Program Lead - School Awareness',
-    category: 'Program Team',
-    categories: ['Program Team'],
-    bio: 'Manages curriculum design, teacher orientation sessions, and workshop facilitators for school campaigns.',
-    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-prog-2',
-    name: 'Dr. Meherun Nisa',
-    role: 'Program Consultant - Mental Health',
-    category: 'Program Team',
-    categories: ['Program Team'],
-    bio: 'Clinical psychologist guiding peer support networks, helpline protocols, and trauma-informed training modules.',
-    photo: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-pr-1',
-    name: 'Shahriar Kabir',
-    role: 'PR & Sponsorship Manager',
-    category: 'PR & Sponsorship Team',
-    categories: ['PR & Sponsorship Team'],
-    bio: 'Builds strategic partnerships with corporate sponsors, international donor agencies, and media houses.',
-    photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-pr-2',
-    name: 'Tahmina Islam',
-    role: 'Media Relations Officer',
-    category: 'PR & Sponsorship Team',
-    categories: ['PR & Sponsorship Team'],
-    bio: 'Coordinates press briefings, event media coverage, and collaborative campaigns with youth influencers.',
-    photo: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'team-vol-1',
-    name: 'Youth Volunteer Network',
-    role: '500+ Active Youth Volunteers across Bangladesh',
-    category: 'Volunteers',
-    categories: ['Volunteers'],
-    bio: 'Dedicated students from over 40 universities and high schools driving school workshops, event management, and peer awareness.',
-    photo: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=600&q=80',
-  },
-];
+export const TEAM_MEMBERS: TeamMember[] = [];
 
 export const FAQS: FaqItem[] = [
   {
@@ -689,14 +571,7 @@ export const IMPACT_STORIES: ImpactStory[] = [
   },
 ];
 
-export const PARTNER_LOGOS: PartnerLogo[] = [
-  { name: 'National Human Rights Network', category: 'Human Rights', logoText: 'NHRN' },
-  { name: 'Bangladesh Youth Foundation', category: 'Youth NGO', logoText: 'BYF' },
-  { name: 'Jessore Education Board Alliance', category: 'Educational Body', logoText: 'JEBA' },
-  { name: 'Mental Health Rights Bangladesh', category: 'Healthcare', logoText: 'MHRB' },
-  { name: 'Legal Aid & Justice Center', category: 'Legal Partner', logoText: 'LAJC' },
-  { name: 'Global Youth Impact Fund', category: 'International Partner', logoText: 'GYIF' },
-];
+export const PARTNER_LOGOS: PartnerLogo[] = [];
 
 export const BANGLADESH_DIVISIONS = [
   'Dhaka',

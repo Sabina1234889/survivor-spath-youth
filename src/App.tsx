@@ -19,10 +19,9 @@ import { AuthModal } from './components/modals/AuthModal';
 import { AdminCmsModal } from './components/modals/AdminCmsModal';
 import { AdminDashboardPage } from './components/pages/AdminDashboardPage';
 import { CmsProvider, useCms } from './context/CmsContext';
-import { PROGRAMS } from './data/mockData';
 
 function AppContent() {
-  const { authModalOpen, setAuthModalOpen, isAdmin, currentUser } = useCms();
+  const { authModalOpen, setAuthModalOpen, isAdmin, currentUser, programs } = useCms();
   const [activePage, setActivePage] = useState<PageId>('home');
 
   // Modal States
@@ -99,7 +98,7 @@ function AppContent() {
   };
 
   const handleOpenProgramModal = (programId: string) => {
-    const prog = PROGRAMS.find((p) => p.id === programId) || null;
+    const prog = programs.find((p) => p.id === programId) || null;
     setSelectedProgram(prog);
   };
 
