@@ -11,6 +11,7 @@ import {
   ChevronDown,
   X,
   Check,
+  Award,
 } from 'lucide-react';
 import { TeamCarousel } from '../TeamCarousel';
 import { getMemberCategories } from '../../types';
@@ -38,6 +39,12 @@ export const TeamPage: React.FC = () => {
           const cats = getMemberCategories(m);
           return cats.some((c) => c.toLowerCase() === activeCategory.toLowerCase());
         });
+
+  // Dedicated list of Chief Advisors
+  const chiefAdvisors = teamMembers.filter((m) => {
+    const cats = getMemberCategories(m);
+    return cats.some((c) => c.toLowerCase() === 'chief advisor');
+  });
 
   const getCategoryCount = (cat: string) => {
     if (cat === 'ALL') return teamMembers.length;
@@ -359,6 +366,40 @@ export const TeamPage: React.FC = () => {
             <p className="text-xs text-gray-500">
               Profiles added via the Admin Panel under "{activeCategory}" will automatically appear here.
             </p>
+          </div>
+        )}
+
+        {/* ESTEEMED CHIEF ADVISORS DEDICATED CAROUSEL SECTION */}
+        {chiefAdvisors.length > 0 && (
+          <div className="pt-10 border-t border-purple-100/90 space-y-6">
+            {/* Section Heading */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200/80 text-[11px] font-extrabold uppercase tracking-wider">
+                  <Award className="w-3.5 h-3.5 text-purple-700" />
+                  <span>Strategic Mentorship & Governance</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-purple-950">
+                  Our Esteemed Chief Advisors
+                </h2>
+                <p className="text-xs sm:text-sm text-purple-900/80 font-medium leading-relaxed">
+                  Distinguished legal advocates, health practitioners, and governance specialists guiding the strategic direction and safeguarding standards of Survivor’s Path Youth.
+                </p>
+              </div>
+
+              <div className="text-xs font-bold text-purple-700 bg-purple-100/80 px-3.5 py-1.5 rounded-xl border border-purple-200/50 shrink-0 self-start sm:self-auto">
+                {chiefAdvisors.length} {chiefAdvisors.length === 1 ? 'Advisor' : 'Advisors'} Guiding Our Mission
+              </div>
+            </div>
+
+            {/* Chief Advisors Carousel Slider */}
+            <div className="py-2">
+              <TeamCarousel
+                members={chiefAdvisors}
+                autoPlayInterval={5000}
+                showCategoryBadge={true}
+              />
+            </div>
           </div>
         )}
 
