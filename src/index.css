@@ -65,4 +65,12 @@ img {
     transform: translateY(1px) translateZ(0);
     box-shadow: 0 4px 8px -2px rgba(88, 28, 135, 0.2);
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
