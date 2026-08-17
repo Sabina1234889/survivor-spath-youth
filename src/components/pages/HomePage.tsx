@@ -31,7 +31,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenProgramModal,
   onOpenInvolvementModal,
 }) => {
-  const { siteContent, events, teamMembers } = useCms();
+  const { siteContent, events, teamMembers, isLoading } = useCms();
   const { hero, whoWeAre, focusAreas, stats, cta } = siteContent;
 
   const featuredEvent =
@@ -313,8 +313,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       )}
 
       {/* ================= MEET OUR HEROES & LEADERS (CAROUSEL) ================= */}
-      {teamMembers.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      {(isLoading || teamMembers.length > 0) && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 min-h-[500px]">
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-purple-100 pb-4">
             <div className="space-y-2">
               <span className="text-xs font-bold uppercase tracking-widest text-purple-700 bg-purple-100 px-3.5 py-1.5 rounded-full shadow-xs">

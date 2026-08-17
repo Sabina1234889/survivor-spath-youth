@@ -14,19 +14,34 @@ import {
   Award,
 } from 'lucide-react';
 import { TeamCarousel } from '../TeamCarousel';
+import { TeamGridSkeleton, TeamCarouselSkeleton } from '../common/SkeletonLoader';
 import { getMemberCategories } from '../../types';
 
 export const TeamPage: React.FC = () => {
-  const { teamMembers, teamCategories } = useCms();
+  const { teamMembers, teamCategories, isLoading } = useCms();
   const [viewMode, setViewMode] = useState<'slider' | 'grid'>('slider');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
-  // Combine managed categories with all assigned categories across all members
+  // Dedicated list of Chief Advisors (members tagged as Chief Advisor)
+  const chiefAdvisors = teamMembers.filter((m) => {
+    const cats = getMemberCategories(m);
+    return cats.some((c) => c.toLowerCase() === 'chief advisor');
+  });
+
+  // Regular operational team members (excluding exclusive Chief Advisors)
+  const regularTeamMembers = teamMembers.filter((m) => {
+    const cats = getMemberCategories(m);
+    return !cats.every((c) => c.toLowerCase() === 'chief advisor');
+  });
+
+  // Combine managed categories for regular team members (excluding Chief Advisor tab)
   const categoriesList = Array.from(
     new Set([
       'ALL',
-      ...(teamCategories || []),
-      ...teamMembers.flatMap((m) => getMemberCategories(m)),
+      ...(teamCategories || []).filter((c) => c.toLowerCase() !== 'chief advisor'),
+      ...regularTeamMembers
+        .flatMap((m) => getMemberCategories(m))
+        .filter((c) => c.toLowerCase() !== 'chief advisor'),
     ])
   );
 
@@ -34,21 +49,15 @@ export const TeamPage: React.FC = () => {
 
   const filteredMembers =
     activeCategory === 'ALL'
-      ? teamMembers
-      : teamMembers.filter((m) => {
+      ? regularTeamMembers
+      : regularTeamMembers.filter((m) => {
           const cats = getMemberCategories(m);
           return cats.some((c) => c.toLowerCase() === activeCategory.toLowerCase());
         });
 
-  // Dedicated list of Chief Advisors
-  const chiefAdvisors = teamMembers.filter((m) => {
-    const cats = getMemberCategories(m);
-    return cats.some((c) => c.toLowerCase() === 'chief advisor');
-  });
-
   const getCategoryCount = (cat: string) => {
-    if (cat === 'ALL') return teamMembers.length;
-    return teamMembers.filter((m) =>
+    if (cat === 'ALL') return regularTeamMembers.length;
+    return regularTeamMembers.filter((m) =>
       getMemberCategories(m).some((c) => c.toLowerCase() === cat.toLowerCase())
     ).length;
   };
@@ -274,68 +283,81 @@ export const TeamPage: React.FC = () => {
         )}
 
         {/* Content Display: Slider or Grid */}
-        {filteredMembers.length > 0 ? (
+        {isLoading ? (
           viewMode === 'slider' ? (
-            <div className="py-2">
+            <div className="py-2 min-h-[420px]">
+              <TeamCarouselSkeleton />
+            </div>
+          ) : (
+            <div className="min-h-[420px]">
+              <TeamGridSkeleton count={8} />
+            </div>
+          )
+        ) : filteredMembers.length > 0 ? (
+          viewMode === 'slider' ? (
+            <div className="py-2 min-h-[420px] animate-fade-in">
               <TeamCarousel members={filteredMembers} autoPlayInterval={4500} />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in min-h-[420px]">
               {filteredMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="bg-white rounded-3xl border border-purple-100 overflow-hidden shadow-xs hover:shadow-lg hover:border-purple-300 transition-all hardware-accelerated p-6 space-y-4 flex flex-col justify-between items-center text-center group"
+                  className="bg-white rounded-3xl border border-purple-100 hover:border-purple-300 shadow-xs hover:shadow-lg transition-all duration-300 hardware-accelerated p-6 space-y-4 flex flex-col justify-between items-center text-center group"
                 >
                   <div className="space-y-4 flex flex-col items-center w-full">
                     {/* Circular Photo Frame */}
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto">
                       {member.photo ? (
                         <img
                           src={member.photo || undefined}
                           alt={member.name}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full rounded-full object-cover border-4 border-purple-100 ring-4 ring-purple-600/10 shadow-md group-hover:scale-105 transition-transform"
+                          className="w-full h-full rounded-full object-cover border-4 border-purple-100 ring-4 ring-purple-600/10 shadow-md group-hover:scale-105 transition-transform duration-300 pointer-events-none"
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-purple-100 border-4 border-purple-100 ring-4 ring-purple-600/10 text-purple-900 font-black text-2xl flex items-center justify-center">
+                        <div className="w-full h-full rounded-full bg-purple-100 border-4 border-purple-100 ring-4 ring-purple-600/10 text-purple-900 font-extrabold text-2xl flex items-center justify-center shadow-md">
                           {(member.name || 'U').charAt(0)}
                         </div>
                       )}
                     </div>
 
-                    <div className="w-full space-y-1.5">
+                    <div className="w-full space-y-2">
                       <div className="flex flex-wrap items-center justify-center gap-1 max-w-full">
                         {getMemberCategories(member).map((cat) => (
                           <span
                             key={cat}
-                            className="text-[9px] font-extrabold uppercase tracking-wider text-purple-800 bg-purple-100 px-2 py-0.5 rounded-full inline-block truncate"
+                            className="inline-block text-[9px] font-extrabold uppercase tracking-wider text-purple-800 bg-purple-100/90 px-2 py-0.5 rounded-full shadow-2xs truncate"
                           >
                             {cat}
                           </span>
                         ))}
                       </div>
-                      <h3 className="text-lg font-bold text-purple-950 mt-1 leading-snug truncate">
+                      <h3 className="text-lg font-extrabold text-purple-950 font-display leading-snug group-hover:text-purple-800 transition-colors line-clamp-1">
                         {member.name}
                       </h3>
-                      <p className="text-xs font-semibold text-purple-800 truncate">{member.role}</p>
+                      <p className="text-xs font-bold text-purple-700 uppercase tracking-wide line-clamp-1">
+                        {member.role}
+                      </p>
+                      <p className="text-xs text-gray-600 leading-relaxed line-clamp-3 pt-1 text-center">
+                        {member.bio}
+                      </p>
                     </div>
-
-                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-3 text-center">
-                      {member.bio}
-                    </p>
                   </div>
 
                   {/* Contact Icons */}
                   <div className="w-full pt-3 border-t border-purple-50 flex items-center justify-between text-xs text-gray-500">
-                    <span className="text-[11px] text-gray-400 font-medium">Survivor’s Path Youth</span>
-                    <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-purple-900/60 uppercase tracking-wider">
+                      SPY Team
+                    </span>
+                    <div className="flex items-center gap-1.5">
                       {member.email && (
                         <a
                           href={`mailto:${member.email}`}
-                          className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-800 hover:text-white transition-colors"
-                          title={member.email}
+                          className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-800 hover:text-white transition-all shadow-2xs"
+                          title={`Email ${member.name}`}
                         >
                           <Mail className="w-3.5 h-3.5" />
                         </a>
@@ -345,7 +367,7 @@ export const TeamPage: React.FC = () => {
                           href={member.linkedin}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-800 hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-800 hover:text-white transition-all shadow-2xs"
                           title="LinkedIn Profile"
                         >
                           <Linkedin className="w-3.5 h-3.5" />
@@ -358,7 +380,7 @@ export const TeamPage: React.FC = () => {
             </div>
           )
         ) : (
-          <div className="bg-white rounded-3xl border border-purple-100 p-12 text-center space-y-3 max-w-md mx-auto shadow-xs">
+          <div className="bg-white rounded-3xl border border-purple-100 p-12 text-center space-y-3 max-w-md mx-auto shadow-xs min-h-[300px] flex flex-col justify-center items-center">
             <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto">
               <UserPlus className="w-6 h-6" />
             </div>
@@ -370,8 +392,8 @@ export const TeamPage: React.FC = () => {
         )}
 
         {/* ESTEEMED CHIEF ADVISORS DEDICATED SECTION */}
-        {chiefAdvisors.length > 0 && (
-          <div className="pt-10 border-t border-purple-100/90 space-y-6">
+        {(isLoading || chiefAdvisors.length > 0) && (
+          <section className="mt-16 pt-12 border-t border-purple-100/90 space-y-8">
             {/* Section Heading */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div className="space-y-2 max-w-2xl">
@@ -388,23 +410,27 @@ export const TeamPage: React.FC = () => {
               </div>
 
               <div className="text-xs font-bold text-purple-700 bg-purple-100/80 px-3.5 py-1.5 rounded-xl border border-purple-200/50 shrink-0 self-start sm:self-auto">
-                {chiefAdvisors.length} {chiefAdvisors.length === 1 ? 'Advisor' : 'Advisors'} Guiding Our Mission
+                {isLoading ? '...' : chiefAdvisors.length} {chiefAdvisors.length === 1 ? 'Advisor' : 'Advisors'} Guiding Our Mission
               </div>
             </div>
 
             {/* Chief Advisors Carousel Slider */}
-            <div className="py-2">
-              <TeamCarousel
-                members={chiefAdvisors}
-                autoPlayInterval={5000}
-                showCategoryBadge={true}
-              />
+            <div className="py-2 min-h-[420px]">
+              {isLoading ? (
+                <TeamCarouselSkeleton />
+              ) : (
+                <TeamCarousel
+                  members={chiefAdvisors}
+                  autoPlayInterval={5000}
+                  showCategoryBadge={true}
+                />
+              )}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Join Team Banner */}
-        <div className="bg-purple-50 rounded-2xl p-6 border border-purple-100 text-center space-y-2 max-w-xl mx-auto">
+        <div className="mt-16 bg-purple-50 rounded-2xl p-6 border border-purple-100 text-center space-y-2 max-w-xl mx-auto">
           <div className="w-10 h-10 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center mx-auto">
             <Users className="w-5 h-5" />
           </div>

@@ -1,18 +1,25 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { TeamMember, getMemberCategories } from '../types';
 import { Mail, Linkedin, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { TeamCarouselSkeleton } from './common/SkeletonLoader';
+import { useCms } from '../context/CmsContext';
 
 interface TeamCarouselProps {
   members: TeamMember[];
   autoPlayInterval?: number; // ms, 0 for off
   showCategoryBadge?: boolean;
+  isLoading?: boolean;
 }
 
 export const TeamCarousel: React.FC<TeamCarouselProps> = ({
   members,
   autoPlayInterval = 4000,
   showCategoryBadge = true,
+  isLoading: propIsLoading,
 }) => {
+  const { isLoading: contextIsLoading } = useCms();
+  const isLoading = propIsLoading !== undefined ? propIsLoading : contextIsLoading;
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -129,13 +136,24 @@ export const TeamCarousel: React.FC<TeamCarouselProps> = ({
     setIsDragging(false);
   };
 
+  // Prevent layout shift: while loading or when data is empty
+  if (isLoading) {
+    return <TeamCarouselSkeleton />;
+  }
+
   if (members.length === 0) {
-    return null;
+    return (
+      <div className="min-h-[380px] flex items-center justify-center bg-purple-50/50 rounded-3xl border border-purple-100 p-8 text-center">
+        <p className="text-sm font-semibold text-purple-900/70">
+          No team members found in this category.
+        </p>
+      </div>
+    );
   }
 
   return (
     <div
-      className="relative space-y-6 select-none"
+      className="relative space-y-6 select-none min-h-[420px] sm:min-h-[440px] animate-fade-in"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {
         setIsHovered(false);
@@ -208,33 +226,23 @@ export const TeamCarousel: React.FC<TeamCarouselProps> = ({
             key={member.id || idx}
             className="shrink-0 w-[84%] sm:w-[46%] md:w-[44%] lg:w-[31%] xl:w-[23.5%] snap-start"
           >
-            <div className="bg-white h-full rounded-3xl border border-purple-100/90 hover:border-purple-300 p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between items-center text-center space-y-4 group relative overflow-hidden">
-              {/* Subtle top ambient glow */}
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-400 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
+            <div className="bg-white h-full rounded-3xl border border-purple-100 hover:border-purple-300 p-6 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between items-center text-center space-y-4 group">
               {/* Circular Photo Frame */}
-              <div className="relative pt-2">
-                <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto">
-                  {member.photo ? (
-                    <img
-                      src={member.photo}
-                      alt={member.name}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full rounded-full object-cover border-4 border-purple-100 ring-4 ring-purple-600/10 group-hover:ring-purple-600/30 group-hover:scale-105 transition-all duration-300 shadow-md pointer-events-none"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 border-4 border-purple-100 ring-4 ring-purple-600/10 text-purple-900 font-extrabold text-2xl flex items-center justify-center shadow-md">
-                      {(member.name || 'U').charAt(0)}
-                    </div>
-                  )}
-
-                  {/* Verified / Role Accent Badge */}
-                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-purple-700 text-white border-2 border-white flex items-center justify-center shadow-xs">
-                    <Sparkles className="w-3 h-3 text-purple-200" />
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto">
+                {member.photo ? (
+                  <img
+                    src={member.photo}
+                    alt={member.name}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full rounded-full object-cover border-4 border-purple-100 ring-4 ring-purple-600/10 group-hover:scale-105 transition-transform duration-300 shadow-md pointer-events-none"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-purple-100 border-4 border-purple-100 ring-4 ring-purple-600/10 text-purple-900 font-extrabold text-2xl flex items-center justify-center shadow-md">
+                    {(member.name || 'U').charAt(0)}
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Member Details */}

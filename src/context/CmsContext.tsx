@@ -245,6 +245,7 @@ interface CmsContextType {
   authModalOpen: boolean;
   setAuthModalOpen: (open: boolean) => void;
   visitorCount: number;
+  isLoading: boolean;
   
   // Site Content Modifiers
   updateHero: (data: Partial<SiteContent['hero']>) => void;
@@ -362,11 +363,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_team');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_TEAM;
+    return [];
   });
 
   const [teamCategories, setTeamCategories] = useState<string[]>(() => {
@@ -385,11 +389,14 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [partners, setPartners] = useState<PartnerLogo[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_partners');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_PARTNERS;
+    return [];
   });
 
   const [complaints, setComplaints] = useState<ComplaintItem[]>(() => {
@@ -498,6 +505,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [visitorCount] = useState<number>(14850);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Brief hydration period to allow initial local storage and firestore caches to settle seamlessly without layout shift
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sync to local storage
   // Sync to local storage & Firestore Realtime Sync
@@ -1694,9 +1710,9 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setEvents(INITIAL_EVENTS);
     setEventAttendees(INITIAL_EVENT_ATTENDEES);
     setPrograms(INITIAL_PROGRAMS);
-    setTeamMembers(INITIAL_TEAM);
+    setTeamMembers([]);
     setTeamCategories(DEFAULT_TEAM_CATEGORIES);
-    setPartners(INITIAL_PARTNERS);
+    setPartners([]);
     setComplaints(INITIAL_COMPLAINTS);
     setInboxItems(INITIAL_INBOX_ITEMS);
     setImpactStories(INITIAL_IMPACT_STORIES);
@@ -1796,6 +1812,7 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetToDefaults,
         isAdminOpen,
         setIsAdminOpen,
+        isLoading,
       }}
     >
       {children}
