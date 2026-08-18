@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle2, Building, Handshake } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle2, Building, Handshake, AlertCircle, Loader2 } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 
 interface ContactPageProps {
@@ -15,6 +15,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onOpenInvolvementModal
   };
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -27,6 +28,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onOpenInvolvementModal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
       await addInboxItem({
         category: 'General Messages',
@@ -39,7 +41,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onOpenInvolvementModal
       });
       setSubmitted(true);
     } catch (err: any) {
-      alert('Error submitting message: ' + (err?.message || 'Please check connection and try again.'));
+      setErrorMessage(err?.message || 'Unable to submit message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -166,6 +168,13 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onOpenInvolvementModal
                   Send Us a Direct Message
                 </h3>
 
+                {errorMessage && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
@@ -256,10 +265,20 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onOpenInvolvementModal
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-purple-700 hover:bg-purple-800 disabled:opacity-60 shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Send className="w-4 h-4" />
-                    <span>SEND MESSAGE</span>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>SENDING MESSAGE...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>SEND MESSAGE</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

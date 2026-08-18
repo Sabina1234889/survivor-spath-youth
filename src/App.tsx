@@ -34,10 +34,9 @@ function AppContent() {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [activePage]);
 
-  // Safety Guard: Automatically kick non-admin users out of admin page
+  // Safety Guard: Automatically redirect non-admin users out of admin page
   useEffect(() => {
     if (activePage === 'admin' && !isAdmin) {
-      alert('Access Denied: Admin privileges required to access the Staff & Admin Panel.');
       setActivePage('home');
       window.location.hash = 'home';
       if (!currentUser) {
@@ -68,7 +67,6 @@ function AppContent() {
       ];
       if (hash && validPages.includes(hash)) {
         if (hash === 'admin' && !isAdmin) {
-          alert('Access Denied: Admin privileges required to access the Staff & Admin Panel.');
           window.location.hash = 'home';
           setActivePage('home');
           if (!currentUser) {
@@ -87,7 +85,6 @@ function AppContent() {
 
   const handlePageChange = (page: PageId) => {
     if (page === 'admin' && !isAdmin) {
-      alert('Access Denied: Admin privileges required to access the Staff & Admin Panel.');
       if (!currentUser) {
         setAuthModalOpen(true);
       }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, Heart, Users, Building, School } from 'lucide-react';
+import { X, CheckCircle2, Heart, Users, Building, School, AlertCircle, Loader2 } from 'lucide-react';
 import { useCms } from '../../context/CmsContext';
 import { InboxCategory } from '../../types';
 
@@ -17,6 +17,8 @@ interface GetInvolvedModalProps {
 export const GetInvolvedModal: React.FC<GetInvolvedModalProps> = ({ type, onClose }) => {
   const { addInboxItem } = useCms();
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,8 +43,10 @@ export const GetInvolvedModal: React.FC<GetInvolvedModalProps> = ({ type, onClos
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage('');
 
     let category: InboxCategory = 'Volunteer Applications';
     let subjectOrRole = type as string;
@@ -61,18 +65,24 @@ export const GetInvolvedModal: React.FC<GetInvolvedModalProps> = ({ type, onClos
       subjectOrRole = 'Campus Safety & Consent Session Request';
     }
 
-    addInboxItem({
-      category,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone || undefined,
-      organizationOrSchool: formData.organizationOrSchool || undefined,
-      districtOrLocation: formData.district || undefined,
-      subjectOrRole,
-      message: formData.message || `Application / Proposal submitted for ${type}.`,
-    });
+    try {
+      await addInboxItem({
+        category,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        organizationOrSchool: formData.organizationOrSchool || undefined,
+        districtOrLocation: formData.district || undefined,
+        subjectOrRole,
+        message: formData.message || `Application / Proposal submitted for ${type}.`,
+      });
 
-    setSubmitted(true);
+      setSubmitted(true);
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -116,6 +126,13 @@ export const GetInvolvedModal: React.FC<GetInvolvedModalProps> = ({ type, onClos
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-700 mb-1">
                   Full Name / Contact Person *
@@ -220,9 +237,17 @@ export const GetInvolvedModal: React.FC<GetInvolvedModalProps> = ({ type, onClos
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-purple-700 hover:bg-purple-800 shadow-md transition-all cursor-pointer"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 rounded-xl font-bold text-sm text-white bg-purple-700 hover:bg-purple-800 disabled:opacity-60 shadow-md transition-all cursor-pointer flex items-center gap-2"
                 >
-                  Submit Interest
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <span>Submit Interest</span>
+                  )}
                 </button>
               </div>
             </form>

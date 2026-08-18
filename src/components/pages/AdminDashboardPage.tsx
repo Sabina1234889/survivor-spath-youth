@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../../supabase';
 import { useCms } from '../../context/CmsContext';
 import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole, getMemberCategories } from '../../types';
 import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/constants';
@@ -401,6 +400,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
   const isInitialComplaints = useRef(true);
   const isInitialInbox = useRef(true);
   const isInitialMessages = useRef(true);
+  const prevComplaintsCount = useRef(0);
+  const prevInboxCount = useRef(0);
 
   const requestNotificationPermission = async () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -421,96 +422,62 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     }
   };
 
-  // Supabase Real-time Notification Trigger for live complaints & inbox messages
+  // Local notification check for new complaints & inbox items
   useEffect(() => {
     if (!currentUser || (!isAdmin && currentUser.role !== 'admin')) return;
 
-    const channel = supabase
-      .channel('admin-live-alerts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'complaints' },
-        (payload) => {
-          if (isInitialComplaints.current) {
-            isInitialComplaints.current = false;
-            return;
-          }
-          const data = (payload.new || {}) as Partial<ComplaintItem>;
-          const alertTitle = `🚨 New Complaint Received (${data.category || 'Anonymous'})`;
-          const alertBody =
-            data.subject ||
-            data.description?.slice(0, 90) ||
-            'A new confidential complaint has been logged in the system.';
+    if (complaints && complaints.length > 0) {
+      if (isInitialComplaints.current) {
+        prevComplaintsCount.current = complaints.length;
+        isInitialComplaints.current = false;
+      } else if (complaints.length > prevComplaintsCount.current) {
+        const latest = complaints[0];
+        const alertTitle = `🚨 New Complaint Received (${latest.category || 'Anonymous'})`;
+        const alertBody = latest.subject || latest.description?.slice(0, 90) || 'A new confidential complaint has been logged in the system.';
 
-          if (
-            typeof window !== 'undefined' &&
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            try {
-              new Notification(alertTitle, {
-                body: alertBody,
-                tag: `complaint-${data.id || Date.now()}`,
-              });
-            } catch (e) {
-              console.warn('Browser notification popup error:', e);
-            }
-          }
-
-          setLiveToast({
-            id: data.id || `toast-${Date.now()}`,
-            title: alertTitle,
-            body: alertBody,
-            type: 'complaint',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          });
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(alertTitle, { body: alertBody, tag: `comp-${latest.id}` });
+          } catch (e) {}
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'inbox' },
-        (payload) => {
-          if (isInitialInbox.current) {
-            isInitialInbox.current = false;
-            return;
-          }
-          const data = (payload.new || {}) as Partial<InboxItem>;
-          const alertTitle = `📥 New Message from ${data.name || 'Visitor'}`;
-          const alertBody =
-            data.subjectOrRole ||
-            data.message?.slice(0, 90) ||
-            'A new inquiry was received in the CMS inbox.';
 
-          if (
-            typeof window !== 'undefined' &&
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            try {
-              new Notification(alertTitle, {
-                body: alertBody,
-                tag: `inbox-${data.id || Date.now()}`,
-              });
-            } catch (e) {
-              console.warn('Browser notification popup error:', e);
-            }
-          }
+        setLiveToast({
+          id: latest.id || `toast-${Date.now()}`,
+          title: alertTitle,
+          body: alertBody,
+          type: 'complaint',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+        prevComplaintsCount.current = complaints.length;
+      }
+    }
 
-          setLiveToast({
-            id: data.id || `toast-${Date.now()}`,
-            title: alertTitle,
-            body: alertBody,
-            type: 'inbox',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          });
+    if (inboxItems && inboxItems.length > 0) {
+      if (isInitialInbox.current) {
+        prevInboxCount.current = inboxItems.length;
+        isInitialInbox.current = false;
+      } else if (inboxItems.length > prevInboxCount.current) {
+        const latest = inboxItems[0];
+        const alertTitle = `📥 New Message from ${latest.name || 'Visitor'}`;
+        const alertBody = latest.subjectOrRole || latest.message?.slice(0, 90) || 'A new inquiry was received in the CMS inbox.';
+
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(alertTitle, { body: alertBody, tag: `inb-${latest.id}` });
+          } catch (e) {}
         }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser, isAdmin]);
+        setLiveToast({
+          id: latest.id || `toast-${Date.now()}`,
+          title: alertTitle,
+          body: alertBody,
+          type: 'inbox',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+        prevInboxCount.current = inboxItems.length;
+      }
+    }
+  }, [complaints, inboxItems, currentUser, isAdmin]);
 
   // Modals & Forms State
   const [showAddEventModal, setShowAddEventModal] = useState(false);

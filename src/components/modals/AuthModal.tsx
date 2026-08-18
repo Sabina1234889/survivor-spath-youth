@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCms } from '../../context/CmsContext';
-import { X, Lock, Mail, User, ShieldCheck, UserCheck, AlertCircle, Sparkles, LogIn, UserPlus } from 'lucide-react';
+import { X, Lock, Mail, User, ShieldCheck, UserCheck, AlertCircle, Sparkles, LogIn, UserPlus, Loader2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,9 +28,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -40,19 +42,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = loginUser(loginEmail, loginPassword);
-    if (res.success && res.user) {
-      setSuccessMsg(`Welcome back, ${res.user.name}!`);
-      setTimeout(() => {
-        onClose();
-        setSuccessMsg('');
-      }, 1000);
-    } else {
-      setErrorMsg(res.message || 'Login failed.');
+    setIsSubmitting(true);
+    try {
+      const res = await loginUser(loginEmail, loginPassword);
+      if (res && res.success && res.user) {
+        setSuccessMsg(`Welcome back, ${res.user.name}!`);
+        setTimeout(() => {
+          onClose();
+          setSuccessMsg('');
+        }, 800);
+      } else {
+        setErrorMsg(res?.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'An unexpected error occurred during login.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -62,15 +71,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = registerUser(regName, regEmail, regPassword);
-    if (res.success && res.user) {
-      setSuccessMsg(`Account created successfully! Default role: ${res.user.role.toUpperCase()}`);
-      setTimeout(() => {
-        onClose();
-        setSuccessMsg('');
-      }, 1200);
-    } else {
-      setErrorMsg(res.message || 'Registration failed.');
+    setIsSubmitting(true);
+    try {
+      const res = await registerUser(regName, regEmail, regPassword);
+      if (res && res.success && res.user) {
+        setSuccessMsg(`Account created successfully! Default role: ${res.user.role.toUpperCase()}`);
+        setTimeout(() => {
+          onClose();
+          setSuccessMsg('');
+        }, 1000);
+      } else {
+        setErrorMsg(res?.message || 'Registration failed. Please check your input.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'An unexpected error occurred during registration.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -246,10 +262,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs uppercase tracking-wider shadow-md btn-3d-push cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full py-3 rounded-xl bg-purple-900 hover:bg-purple-950 disabled:opacity-60 text-white font-bold text-xs uppercase tracking-wider shadow-md btn-3d-push cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-4 h-4" />
+                      <span>Sign In</span>
+                    </>
+                  )}
                 </button>
               </form>
             )}
@@ -313,10 +339,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-purple-900 hover:bg-purple-950 text-white font-bold text-xs uppercase tracking-wider shadow-md btn-3d-push cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full py-3 rounded-xl bg-purple-900 hover:bg-purple-950 disabled:opacity-60 text-white font-bold text-xs uppercase tracking-wider shadow-md btn-3d-push cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Account</span>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Creating Account...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-4 h-4" />
+                      <span>Create Account</span>
+                    </>
+                  )}
                 </button>
               </form>
             )}
