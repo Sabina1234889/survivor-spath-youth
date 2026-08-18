@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, setDoc, getDoc, collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { supabase } from '../../supabase';
 import { useCms } from '../../context/CmsContext';
 import { PageId, EventItem, ProgramItem, TeamMember, PartnerLogo, ComplaintItem, InboxItem, InboxCategory, ImpactStory, UserAccount, UserRole, getMemberCategories } from '../../types';
 import { BANGLADESH_DIVISIONS, BANGLADESH_DISTRICTS } from '../../data/constants';
@@ -422,130 +421,94 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     }
   };
 
-  // FIRESTORE TRIGGER: Listen via onSnapshot to "complaints", "inbox", and "messages" collections
+  // Supabase Real-time Notification Trigger for live complaints & inbox messages
   useEffect(() => {
-    if (!db || !currentUser || (!isAdmin && currentUser.role !== 'admin')) return;
+    if (!currentUser || (!isAdmin && currentUser.role !== 'admin')) return;
 
-    // 1. Complaints Collection Real-time Trigger
-    const unsubComplaints = onSnapshot(
-      collection(db, 'complaints'),
-      (snapshot) => {
-        if (isInitialComplaints.current) {
-          isInitialComplaints.current = false;
-          return;
-        }
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const data = change.doc.data() as Partial<ComplaintItem>;
-            const alertTitle = `🚨 New Complaint Received (${data.category || 'Anonymous'})`;
-            const alertBody = data.subject || data.description?.slice(0, 90) || 'A new confidential complaint has been logged in the system.';
-
-            // Browser Notification API
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              try {
-                new Notification(alertTitle, {
-                  body: alertBody,
-                  tag: `complaint-${change.doc.id}`,
-                });
-              } catch (e) {
-                console.warn('Browser notification popup error:', e);
-              }
-            }
-
-            // In-app Notification Banner
-            setLiveToast({
-              id: change.doc.id,
-              title: alertTitle,
-              body: alertBody,
-              type: 'complaint',
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            });
+    const channel = supabase
+      .channel('admin-live-alerts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'complaints' },
+        (payload) => {
+          if (isInitialComplaints.current) {
+            isInitialComplaints.current = false;
+            return;
           }
-        });
-      },
-      (err) => console.warn('Real-time complaints trigger notice:', err)
-    );
+          const data = (payload.new || {}) as Partial<ComplaintItem>;
+          const alertTitle = `🚨 New Complaint Received (${data.category || 'Anonymous'})`;
+          const alertBody =
+            data.subject ||
+            data.description?.slice(0, 90) ||
+            'A new confidential complaint has been logged in the system.';
 
-    // 2. Inbox Collection Real-time Trigger
-    const unsubInbox = onSnapshot(
-      collection(db, 'inbox'),
-      (snapshot) => {
-        if (isInitialInbox.current) {
-          isInitialInbox.current = false;
-          return;
-        }
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const data = change.doc.data() as Partial<InboxItem>;
-            const alertTitle = `📥 New Message from ${data.name || 'Visitor'}`;
-            const alertBody = data.subjectOrRole || data.message?.slice(0, 90) || 'A new inquiry was received in the CMS inbox.';
-
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              try {
-                new Notification(alertTitle, {
-                  body: alertBody,
-                  tag: `inbox-${change.doc.id}`,
-                });
-              } catch (e) {
-                console.warn('Browser notification popup error:', e);
-              }
+          if (
+            typeof window !== 'undefined' &&
+            'Notification' in window &&
+            Notification.permission === 'granted'
+          ) {
+            try {
+              new Notification(alertTitle, {
+                body: alertBody,
+                tag: `complaint-${data.id || Date.now()}`,
+              });
+            } catch (e) {
+              console.warn('Browser notification popup error:', e);
             }
-
-            setLiveToast({
-              id: change.doc.id,
-              title: alertTitle,
-              body: alertBody,
-              type: 'inbox',
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            });
           }
-        });
-      },
-      (err) => console.warn('Real-time inbox trigger notice:', err)
-    );
 
-    // 3. Messages Collection Real-time Trigger
-    const unsubMessages = onSnapshot(
-      collection(db, 'messages'),
-      (snapshot) => {
-        if (isInitialMessages.current) {
-          isInitialMessages.current = false;
-          return;
+          setLiveToast({
+            id: data.id || `toast-${Date.now()}`,
+            title: alertTitle,
+            body: alertBody,
+            type: 'complaint',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          });
         }
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const data = change.doc.data() as any;
-            const alertTitle = `💬 New Message Received`;
-            const alertBody = data.subject || data.message || data.text || 'A new direct message document was logged.';
-
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              try {
-                new Notification(alertTitle, {
-                  body: alertBody,
-                  tag: `messages-${change.doc.id}`,
-                });
-              } catch (e) {
-                console.warn('Browser notification popup error:', e);
-              }
-            }
-
-            setLiveToast({
-              id: change.doc.id,
-              title: alertTitle,
-              body: alertBody,
-              type: 'inbox',
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            });
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'inbox' },
+        (payload) => {
+          if (isInitialInbox.current) {
+            isInitialInbox.current = false;
+            return;
           }
-        });
-      },
-      (err) => console.warn('Real-time messages trigger notice:', err)
-    );
+          const data = (payload.new || {}) as Partial<InboxItem>;
+          const alertTitle = `📥 New Message from ${data.name || 'Visitor'}`;
+          const alertBody =
+            data.subjectOrRole ||
+            data.message?.slice(0, 90) ||
+            'A new inquiry was received in the CMS inbox.';
+
+          if (
+            typeof window !== 'undefined' &&
+            'Notification' in window &&
+            Notification.permission === 'granted'
+          ) {
+            try {
+              new Notification(alertTitle, {
+                body: alertBody,
+                tag: `inbox-${data.id || Date.now()}`,
+              });
+            } catch (e) {
+              console.warn('Browser notification popup error:', e);
+            }
+          }
+
+          setLiveToast({
+            id: data.id || `toast-${Date.now()}`,
+            title: alertTitle,
+            body: alertBody,
+            type: 'inbox',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          });
+        }
+      )
+      .subscribe();
 
     return () => {
-      unsubComplaints();
-      unsubInbox();
-      unsubMessages();
+      supabase.removeChannel(channel);
     };
   }, [currentUser, isAdmin]);
 
@@ -577,79 +540,45 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
     image: '',
   });
 
-  // System Settings State & Firestore Real-Time Load
+  // System Settings State
   const [settingsForm, setSettingsForm] = useState({
-    siteName: siteContent.siteName || "Survivor's Path Youth",
-    maintenanceMode: !!siteContent.maintenanceMode,
-    email: siteContent.contactInfo?.email || '',
-    phone: siteContent.contactInfo?.phone || '',
-    officeLocations: siteContent.contactInfo?.officeLocations || '',
-    footerAbout: siteContent.contactInfo?.footerAbout || '',
-    facebook: siteContent.socialLinks?.facebook || '',
-    instagram: siteContent.socialLinks?.instagram || '',
-    linkedin: siteContent.socialLinks?.linkedin || '',
-    youtube: siteContent.socialLinks?.youtube || '',
+    siteName: siteContent?.siteName || "Survivor's Path Youth",
+    maintenanceMode: !!siteContent?.maintenanceMode,
+    email: siteContent?.contactInfo?.email || '',
+    phone: siteContent?.contactInfo?.phone || '',
+    officeLocations: siteContent?.contactInfo?.officeLocations || '',
+    footerAbout: siteContent?.contactInfo?.footerAbout || '',
+    facebook: siteContent?.socialLinks?.facebook || '',
+    instagram: siteContent?.socialLinks?.instagram || '',
+    linkedin: siteContent?.socialLinks?.linkedin || '',
+    youtube: siteContent?.socialLinks?.youtube || '',
   });
 
   useEffect(() => {
-    const loadSettingsFromFirestore = async () => {
-      try {
-        const docSnap = await getDoc(doc(db, 'settings', 'general'));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSettingsForm({
-            siteName: data.siteName || data.siteTitle || siteContent.siteName || "Survivor's Path Youth",
-            maintenanceMode: typeof data.maintenanceMode === 'boolean' ? data.maintenanceMode : !!siteContent.maintenanceMode,
-            email: data.email || data.contactInfo?.email || siteContent.contactInfo?.email || '',
-            phone: data.phone || data.contactInfo?.phone || siteContent.contactInfo?.phone || '',
-            officeLocations: data.officeLocations || data.contactInfo?.officeLocations || siteContent.contactInfo?.officeLocations || '',
-            footerAbout: data.footerAbout || data.contactInfo?.footerAbout || siteContent.contactInfo?.footerAbout || '',
-            facebook: data.socialLinks?.facebook ?? data.facebook ?? siteContent.socialLinks?.facebook ?? '',
-            instagram: data.socialLinks?.instagram ?? data.instagram ?? siteContent.socialLinks?.instagram ?? '',
-            linkedin: data.socialLinks?.linkedin ?? data.linkedin ?? siteContent.socialLinks?.linkedin ?? '',
-            youtube: data.socialLinks?.youtube ?? data.youtube ?? siteContent.socialLinks?.youtube ?? '',
-          });
-        }
-      } catch (err) {
-        console.warn('Failed to load settings from Firestore:', err);
-      }
-    };
-
-    loadSettingsFromFirestore();
-  }, [activeTab]);
+    if (siteContent) {
+      setSettingsForm({
+        siteName: siteContent.siteName || "Survivor's Path Youth",
+        maintenanceMode: !!siteContent.maintenanceMode,
+        email: siteContent.contactInfo?.email || '',
+        phone: siteContent.contactInfo?.phone || '',
+        officeLocations: siteContent.contactInfo?.officeLocations || '',
+        footerAbout: siteContent.contactInfo?.footerAbout || '',
+        facebook: siteContent.socialLinks?.facebook || '',
+        instagram: siteContent.socialLinks?.instagram || '',
+        linkedin: siteContent.socialLinks?.linkedin || '',
+        youtube: siteContent.socialLinks?.youtube || '',
+      });
+    }
+  }, [siteContent, activeTab]);
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
-    const formData = {
-      siteName: settingsForm.siteName,
-      maintenanceMode: settingsForm.maintenanceMode,
-      contactInfo: {
-        ...siteContent.contactInfo,
-        email: settingsForm.email,
-        phone: settingsForm.phone,
-        officeLocations: settingsForm.officeLocations,
-        footerAbout: settingsForm.footerAbout,
-      },
-      email: settingsForm.email,
-      phone: settingsForm.phone,
-      officeLocations: settingsForm.officeLocations,
-      footerAbout: settingsForm.footerAbout,
-      socialLinks: {
-        facebook: settingsForm.facebook,
-        instagram: settingsForm.instagram,
-        linkedin: settingsForm.linkedin,
-        youtube: settingsForm.youtube,
-      },
-      updatedAt: new Date().toISOString(),
-    };
-
     try {
-      await setDoc(doc(db, 'settings', 'general'), formData, { merge: true });
       await updateSystemSettings(settingsForm);
-      alert('System settings successfully saved and synced to Firestore (settings/general)!');
+      alert('System settings successfully saved!');
     } catch (err: any) {
       console.error('Save settings error:', err);
-      alert('Failed to save settings: ' + (err?.message || 'Check connection'));
+      alert('Failed to save settings: ' + (err?.message || 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
@@ -731,25 +660,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
       return `"${str}"`;
     };
 
-    const rows = attendeesList.map((att) => [
-      escapeCsv(att.registrationDate),
-      escapeCsv(att.fullName),
-      escapeCsv(att.phone || 'N/A'),
-      escapeCsv(att.email || 'N/A'),
-      escapeCsv(att.schoolOrInstitution || 'N/A'),
-      escapeCsv(att.tShirtSize || 'N/A'),
-      escapeCsv(att.emergencyContact || 'N/A'),
-      escapeCsv(att.customQuestionAnswer || 'N/A'),
+    const safeTitle = (eventItem?.title || 'Event').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeAttendees = attendeesList || [];
+    const rows = safeAttendees.map((att) => [
+      escapeCsv(att?.registrationDate),
+      escapeCsv(att?.fullName),
+      escapeCsv(att?.phone || 'N/A'),
+      escapeCsv(att?.email || 'N/A'),
+      escapeCsv(att?.schoolOrInstitution || 'N/A'),
+      escapeCsv(att?.tShirtSize || 'N/A'),
+      escapeCsv(att?.emergencyContact || 'N/A'),
+      escapeCsv(att?.customQuestionAnswer || 'N/A'),
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csvContent = [headers.join(','), ...(rows || []).map((r) => r.join(','))].join('\n');
 
     // Add UTF-8 BOM so Excel & Google Sheets open special characters seamlessly
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    const safeTitle = eventItem.title.replace(/[^a-zA-Z0-9_-]/g, '_');
     link.setAttribute('download', `${safeTitle}_Attendees_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
@@ -952,7 +882,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
         updatedAt: new Date().toISOString(),
       };
 
-      await setDoc(doc(db, 'settings', 'general'), formData, { merge: true });
       await updateSystemSettings(settingsForm);
 
       safeLocalStorageSet('spy_cms_siteContent', JSON.stringify(siteContent));
@@ -1011,8 +940,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Session Details</div>
             {currentUser ? (
               <div>
-                <div className="font-bold text-slate-200">{currentUser.name} ({currentUser.email})</div>
-                <div className="text-rose-400 font-bold mt-0.5">Role: {currentUser.role.toUpperCase()} (Standard User - Access Blocked)</div>
+                <div className="font-bold text-slate-200">{currentUser?.name || 'User'} ({currentUser?.email || 'No email'})</div>
+                <div className="text-rose-400 font-bold mt-0.5">Role: {currentUser?.role?.toUpperCase?.() || 'USER'} (Standard User - Access Blocked)</div>
               </div>
             ) : (
               <div className="text-amber-400 font-medium">No active user session detected. Please sign in.</div>
@@ -1106,11 +1035,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-purple-700 border border-purple-400 flex items-center justify-center text-xs font-bold text-white uppercase">
-              {currentUser.name.charAt(0)}
+              {currentUser?.name?.charAt(0) || 'A'}
             </div>
             <div className="text-left hidden md:block">
-              <div className="text-xs font-bold text-white leading-tight">{currentUser.name}</div>
-              <div className="text-[10px] text-purple-300 font-bold uppercase">{currentUser.role} Level</div>
+              <div className="text-xs font-bold text-white leading-tight">{currentUser?.name || 'Administrator'}</div>
+              <div className="text-[10px] text-purple-300 font-bold uppercase">{currentUser?.role || 'Admin'} Level</div>
             </div>
           </div>
         </div>
@@ -1467,7 +1396,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
             </button>
 
             <div className="text-[10px] text-purple-400 text-center">
-              Active: {currentUser.name} ({currentUser.role})
+              Active: {currentUser?.name || 'Administrator'} ({currentUser?.role || 'Admin'})
             </div>
           </div>
         </aside>
@@ -1564,7 +1493,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                       {upcomingEventsCount} Active
                     </div>
                     <div className="text-[11px] text-purple-700 font-semibold">
-                      Featured: {events.find((e) => e.isFeatured)?.title.slice(0, 20) || 'None'}...
+                      Featured: {(events || []).find((e) => e?.isFeatured)?.title?.slice(0, 20) || 'None'}...
                     </div>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100">
@@ -1600,10 +1529,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                       Total Programs
                     </div>
                     <div className="text-2xl font-black text-purple-950 font-display">
-                      {programs.length} Initiatives
+                      {(programs || []).length} Initiatives
                     </div>
                     <div className="text-[11px] text-purple-700 font-semibold">
-                      Team Members: {teamMembers.length}
+                      Team Members: {(teamMembers || []).length}
                     </div>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-100">
@@ -1640,7 +1569,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   </div>
 
                   <div className="space-y-3">
-                    {complaints.slice(0, 3).map((comp) => (
+                    {(complaints || []).slice(0, 3).map((comp) => (
                       <div
                         key={comp.id}
                         className="p-4 rounded-2xl border border-gray-100 bg-purple-50/40 hover:bg-purple-50 transition-colors flex items-center justify-between gap-4"
@@ -1773,10 +1702,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <button
                   onClick={async () => {
                     try {
-                      await updateHero(siteContent.hero);
-                      await updateWhoWeAre(siteContent.whoWeAre);
-                      await updateFocusAreas(siteContent.focusAreas);
-                      await updateCta(siteContent.cta);
+                      await updateHero(siteContent?.hero || {});
+                      await updateWhoWeAre(siteContent?.whoWeAre || {});
+                      await updateFocusAreas(siteContent?.focusAreas || []);
+                      await updateCta(siteContent?.cta || {});
                       alert('Page content successfully saved and synced to Firestore (content/homepage)!');
                     } catch (err: any) {
                       alert('Failed to save content: ' + (err?.message || 'Check connection'));
@@ -1805,7 +1734,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.hero.badge}
+                      value={siteContent?.hero?.badge || ''}
                       onChange={(e) => updateHero({ badge: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1817,7 +1746,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.hero.primaryBtnText}
+                      value={siteContent?.hero?.primaryBtnText || ''}
                       onChange={(e) => updateHero({ primaryBtnText: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1831,7 +1760,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.hero.headline}
+                      value={siteContent?.hero?.headline || ''}
                       onChange={(e) => updateHero({ headline: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1843,7 +1772,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.hero.headlineHighlight}
+                      value={siteContent?.hero?.headlineHighlight || ''}
                       onChange={(e) => updateHero({ headlineHighlight: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1856,7 +1785,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   </label>
                   <textarea
                     rows={3}
-                    value={siteContent.hero.subheadline}
+                    value={siteContent?.hero?.subheadline || ''}
                     onChange={(e) => updateHero({ subheadline: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -1864,7 +1793,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
                 <ImageUploadField
                   label="Hero Background Image (Full Width)"
-                  value={siteContent.hero.bgImage}
+                  value={siteContent?.hero?.bgImage || ''}
                   onChange={(base64) => updateHero({ bgImage: base64 })}
                   helpText="Upload a high-resolution banner image from device (PNG, JPG, WEBP)"
                 />
@@ -1885,7 +1814,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   </label>
                   <input
                     type="text"
-                    value={siteContent.whoWeAre.title}
+                    value={siteContent?.whoWeAre?.title || ''}
                     onChange={(e) => updateWhoWeAre({ title: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -1897,7 +1826,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   </label>
                   <textarea
                     rows={4}
-                    value={siteContent.whoWeAre.description}
+                    value={siteContent?.whoWeAre?.description || ''}
                     onChange={(e) => updateWhoWeAre({ description: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -1910,7 +1839,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.whoWeAre.bullet1}
+                      value={siteContent?.whoWeAre?.bullet1 || ''}
                       onChange={(e) => updateWhoWeAre({ bullet1: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1921,7 +1850,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.whoWeAre.bullet2}
+                      value={siteContent?.whoWeAre?.bullet2 || ''}
                       onChange={(e) => updateWhoWeAre({ bullet2: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1932,7 +1861,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </label>
                     <input
                       type="text"
-                      value={siteContent.whoWeAre.bullet3}
+                      value={siteContent?.whoWeAre?.bullet3 || ''}
                       onChange={(e) => updateWhoWeAre({ bullet3: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
                     />
@@ -1941,7 +1870,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
 
                 <ImageUploadField
                   label="Who We Are Section Photograph"
-                  value={siteContent.whoWeAre.image}
+                  value={siteContent?.whoWeAre?.image || ''}
                   onChange={(base64) => updateWhoWeAre({ image: base64 })}
                   helpText="Upload section photograph from device (PNG, JPG, WEBP)"
                 />
@@ -1964,7 +1893,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
-                      const next = [...(siteContent.stats || []), { value: '0+', label: 'New Metric', description: 'Description of metric' }];
+                      const next = [...(siteContent?.stats || []), { value: '0+', label: 'New Metric', description: 'Description of metric' }];
                       updateStats(next);
                     }}
                     className="px-4 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
@@ -1975,7 +1904,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   <button
                     onClick={async () => {
                       try {
-                        await updateStats(siteContent.stats || []);
+                        await updateStats(siteContent?.stats || []);
                         alert('Impact statistics successfully saved and synced to Firestore (stats/impact)!');
                       } catch (err: any) {
                         alert('Failed to save impact stats: ' + (err?.message || 'Check connection'));
@@ -1989,7 +1918,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 </div>
               </div>
 
-              {(!siteContent.stats || siteContent.stats.length === 0) ? (
+              {(!siteContent?.stats || siteContent?.stats?.length === 0) ? (
                 <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-purple-200 p-8 space-y-4">
                   <BarChart3 className="w-12 h-12 text-purple-300 mx-auto" />
                   <div className="space-y-1">
@@ -2009,7 +1938,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {siteContent.stats.map((stat, idx) => (
+                  {(siteContent?.stats || []).map((stat, idx) => (
                     <div
                       key={idx}
                       className="bg-white p-6 rounded-3xl border border-purple-200 shadow-xs space-y-4 relative"
@@ -2020,7 +1949,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                         </span>
                         <button
                           onClick={() => {
-                            const next = siteContent.stats.filter((_, i) => i !== idx);
+                            const next = (siteContent?.stats || []).filter((_, i) => i !== idx);
                             updateStats(next);
                           }}
                           className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -2037,10 +1966,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           </label>
                           <input
                             type="text"
-                            value={stat.value}
+                            value={stat?.value || ''}
                             onChange={(e) => {
-                              const next = [...siteContent.stats];
-                              next[idx].value = e.target.value;
+                              const next = [...(siteContent?.stats || [])];
+                              if (next[idx]) next[idx] = { ...next[idx], value: e.target.value };
                               updateStats(next);
                             }}
                             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-lg font-black text-purple-950 focus:ring-2 focus:ring-purple-600 outline-none"
@@ -2053,10 +1982,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           </label>
                           <input
                             type="text"
-                            value={stat.label}
+                            value={stat?.label || ''}
                             onChange={(e) => {
-                              const next = [...siteContent.stats];
-                              next[idx].label = e.target.value;
+                              const next = [...(siteContent?.stats || [])];
+                              if (next[idx]) next[idx] = { ...next[idx], label: e.target.value };
                               updateStats(next);
                             }}
                             className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-purple-600 outline-none"
@@ -2069,10 +1998,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                           </label>
                           <textarea
                             rows={2}
-                            value={stat.description}
+                            value={stat?.description || ''}
                             onChange={(e) => {
-                              const next = [...siteContent.stats];
-                              next[idx].description = e.target.value;
+                              const next = [...(siteContent?.stats || [])];
+                              if (next[idx]) next[idx] = { ...next[idx], description: e.target.value };
                               updateStats(next);
                             }}
                             className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs text-gray-700 focus:ring-2 focus:ring-purple-600 outline-none"
@@ -2123,11 +2052,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
               <div className="bg-white rounded-3xl border border-purple-200 shadow-xs overflow-hidden">
                 <div className="p-4 border-b border-purple-100 bg-purple-50/50 flex items-center justify-between">
                   <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
-                    All Stories ({impactStories.length})
+                    All Stories ({(impactStories || []).length})
                   </span>
                 </div>
 
-                {impactStories.length === 0 ? (
+                {(!impactStories || impactStories.length === 0) ? (
                   <div className="p-12 text-center space-y-4">
                     <BookOpen className="w-12 h-12 text-purple-300 mx-auto" />
                     <p className="text-sm font-bold text-gray-700">No impact stories found.</p>
@@ -2164,7 +2093,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-purple-100">
-                        {impactStories.map((story) => (
+                        {(impactStories || []).map((story) => (
                           <tr key={story.id} className="hover:bg-purple-50/40 transition-colors">
                             <td className="p-4">
                               {story.image ? (
@@ -2280,7 +2209,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     onClick={() => {
                       setEditingProgram(null);
                       setProgramForm({
-                        number: programs.length + 1,
+                        number: (programs || []).length + 1,
                         title: '',
                         shortDescription: '',
                         fullDescription: '',
@@ -2304,7 +2233,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-purple-50/50">
                   <h3 className="text-sm font-extrabold text-purple-950 font-display uppercase tracking-wider flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-purple-700" />
-                    <span>Flagship Events Registry ({events.length})</span>
+                    <span>Flagship Events Registry ({(events || []).length})</span>
                   </h3>
                 </div>
 
@@ -2321,7 +2250,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {events.map((ev) => (
+                      {(events || []).map((ev) => (
                         <tr key={ev.id} className="hover:bg-purple-50/30 transition-colors">
                           <td className="p-4 font-bold text-gray-900 max-w-xs">
                             <div className="flex items-center gap-3">
@@ -2347,8 +2276,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                             <span
                               className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
                                 ev.status === 'upcoming'
-                                  ? 'bg-purple-100 text-purple-800 border border-purple-300'
-                                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+                                    ? 'bg-purple-100 text-purple-800 border border-purple-300'
+                                    : 'bg-gray-100 text-gray-700 border border-gray-300'
                               }`}
                             >
                               {ev.status}
@@ -2394,7 +2323,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                                 <Users className="w-3.5 h-3.5 text-purple-700" />
                                 <span>Attendees</span>
                                 <span className="px-1.5 py-0.2 rounded-full bg-purple-800 text-white text-[10px] font-black">
-                                  {getAttendeesForEvent(ev.id).length}
+                                  {(getAttendeesForEvent(ev?.id || '') || []).length}
                                 </span>
                               </button>
                               <button
@@ -3455,7 +3384,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                     </div>
 
                     {/* Additional Approved Admins */}
-                    {approvedAdminEmails
+                    {(approvedAdminEmails || [])
                       .filter((e) => Boolean(e && typeof e === 'string' && e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com'))
                       .map((email) => (
                         <div
@@ -3487,7 +3416,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
                   <div>
                     <div className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider">Total User Accounts</div>
-                    <div className="text-2xl font-black text-purple-950 mt-1">{users.length}</div>
+                    <div className="text-2xl font-black text-purple-950 mt-1">{(users || []).length}</div>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
                     <Users className="w-5 h-5" />
@@ -3498,7 +3427,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   <div>
                     <div className="text-[10px] font-extrabold uppercase text-purple-700 tracking-wider">Approved Admin Access</div>
                     <div className="text-2xl font-black text-purple-900 mt-1">
-                      {1 + approvedAdminEmails.filter((e) => Boolean(e && typeof e === 'string' && e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com')).length}
+                      {1 + (approvedAdminEmails || []).filter((e) => Boolean(e && typeof e === 'string' && e.toLowerCase() !== 'mdanontosunny1068@mail.com' && e.toLowerCase() !== 'mdanontosunny1068@gmail.com')).length}
                     </div>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-900 flex items-center justify-center border border-purple-200">
@@ -3510,9 +3439,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   <div>
                     <div className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">Standard Accounts (No Admin)</div>
                     <div className="text-2xl font-black text-slate-900 mt-1">
-                      {users.filter(u => {
+                      {(users || []).filter(u => {
                         const email = String(u?.email || '').trim().toLowerCase();
-                        return email && email !== 'mdanontosunny1068@mail.com' && email !== 'mdanontosunny1068@gmail.com' && !approvedAdminEmails.map(a => String(a || '').trim().toLowerCase()).includes(email);
+                        return email && email !== 'mdanontosunny1068@mail.com' && email !== 'mdanontosunny1068@gmail.com' && !(approvedAdminEmails || []).map(a => String(a || '').trim().toLowerCase()).includes(email);
                       }).length}
                     </div>
                   </div>
@@ -3535,9 +3464,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                   />
                 </div>
                 <div className="text-xs text-gray-500 font-semibold">
-                  Showing {users.filter(u => {
+                  Showing {(users || []).filter(u => {
                     const q = (userSearch || '').trim().toLowerCase();
-                    return !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q));
+                    return !q || (u?.name && u.name.toLowerCase().includes(q)) || (u?.email && u.email.toLowerCase().includes(q));
                   }).length} Accounts
                 </div>
               </div>
@@ -3556,16 +3485,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ setActiv
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {users
+                      {(users || [])
                         .filter((u) => {
                           const q = (userSearch || '').trim().toLowerCase();
-                          return !q || (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q));
+                          return !q || (u?.name && u.name.toLowerCase().includes(q)) || (u?.email && u.email.toLowerCase().includes(q));
                         })
                         .map((u) => {
-                          const isSelf = u.id === currentUser?.id;
-                          const userCleanEmail = (u.email || '').trim().toLowerCase();
+                          const isSelf = u?.id === currentUser?.id;
+                          const userCleanEmail = (u?.email || '').trim().toLowerCase();
                           const isSuper = userCleanEmail === 'mdanontosunny1068@mail.com' || userCleanEmail === 'mdanontosunny1068@gmail.com';
-                          const isApproved = approvedAdminEmails.map(a => String(a || '').trim().toLowerCase()).includes(userCleanEmail);
+                          const isApproved = (approvedAdminEmails || []).map(a => String(a || '').trim().toLowerCase()).includes(userCleanEmail);
 
                           return (
                             <tr key={u.id} className="hover:bg-purple-50/50 transition-colors">

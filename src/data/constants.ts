@@ -170,7 +170,7 @@ export const FAQS: FaqItem[] = [
     id: 'faq-10',
     category: 'PARTNERSHIP',
     question: 'How can corporate sponsors support an event?',
-    answer: 'Corporations can sponsor event zones, provide student gift packs, support educational literature publishing, or sponsor venue facilities for our youth festivals. Contact our PR & Sponsorship team for custom partnership decks.',
+    answer: 'Corporations can sponsor event zones, provide student gift packs, support educational literature publishing, or sponsor venue facilities for our youth programs and summits. Contact our PR & Sponsorship team for custom partnership decks.',
   },
   {
     id: 'faq-11',

@@ -138,7 +138,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.hero.badge}
+                    value={siteContent?.hero?.badge || ''}
                     onChange={(e) => updateHero({ badge: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -149,7 +149,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.hero.primaryBtnText}
+                    value={siteContent?.hero?.primaryBtnText || ''}
                     onChange={(e) => updateHero({ primaryBtnText: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -162,7 +162,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.hero.headline}
+                  value={siteContent?.hero?.headline || ''}
                   onChange={(e) => updateHero({ headline: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -174,7 +174,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.hero.headlineHighlight}
+                  value={siteContent?.hero?.headlineHighlight || ''}
                   onChange={(e) => updateHero({ headlineHighlight: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -186,7 +186,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <textarea
                   rows={3}
-                  value={siteContent.hero.subheadline}
+                  value={siteContent?.hero?.subheadline || ''}
                   onChange={(e) => updateHero({ subheadline: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -198,7 +198,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.hero.bgImage}
+                  value={siteContent?.hero?.bgImage || ''}
                   onChange={(e) => updateHero({ bgImage: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -219,7 +219,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.whoWeAre.title}
+                  value={siteContent?.whoWeAre?.title || ''}
                   onChange={(e) => updateWhoWeAre({ title: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -231,7 +231,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <textarea
                   rows={4}
-                  value={siteContent.whoWeAre.description}
+                  value={siteContent?.whoWeAre?.description || ''}
                   onChange={(e) => updateWhoWeAre({ description: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -244,7 +244,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.whoWeAre.bullet1}
+                    value={siteContent?.whoWeAre?.bullet1 || ''}
                     onChange={(e) => updateWhoWeAre({ bullet1: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -255,7 +255,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.whoWeAre.bullet2}
+                    value={siteContent?.whoWeAre?.bullet2 || ''}
                     onChange={(e) => updateWhoWeAre({ bullet2: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -266,7 +266,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.whoWeAre.bullet3}
+                    value={siteContent?.whoWeAre?.bullet3 || ''}
                     onChange={(e) => updateWhoWeAre({ bullet3: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -279,7 +279,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.whoWeAre.image}
+                  value={siteContent?.whoWeAre?.image || ''}
                   onChange={(e) => updateWhoWeAre({ image: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -580,7 +580,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.cta.headline}
+                  value={siteContent?.cta?.headline || ''}
                   onChange={(e) => updateCta({ headline: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -592,7 +592,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.cta.description}
+                  value={siteContent?.cta?.description || ''}
                   onChange={(e) => updateCta({ description: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />
@@ -605,7 +605,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="email"
-                    value={siteContent.contactInfo.email}
+                    value={siteContent?.contactInfo?.email || ''}
                     onChange={(e) => updateContactInfo({ email: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -616,7 +616,7 @@ export const AdminCmsModal: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={siteContent.contactInfo.phone}
+                    value={siteContent?.contactInfo?.phone || ''}
                     onChange={(e) => updateContactInfo({ phone: e.target.value })}
                     className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                   />
@@ -629,7 +629,7 @@ export const AdminCmsModal: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={siteContent.contactInfo.officeLocations}
+                  value={siteContent?.contactInfo?.officeLocations || ''}
                   onChange={(e) => updateContactInfo({ officeLocations: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-purple-600 outline-none"
                 />

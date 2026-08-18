@@ -1,23 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
-  collection,
-  doc,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  writeBatch,
-  onSnapshot,
-} from 'firebase/firestore';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-} from 'firebase/auth';
-import { db, auth } from '../firebase';
-import {
   SiteContent,
   FocusAreaItem,
   StatItem,
@@ -40,6 +22,7 @@ import {
   DEFAULT_TEAM_CATEGORIES,
 } from '../data/constants';
 import { safeLocalStorageSet } from '../utils/imageCompressor';
+import { supabase } from '../supabase';
 
 const DEFAULT_SOCIAL_LINKS: SocialLinks = {
   facebook: 'https://facebook.com/survivorspathyouth',
@@ -91,38 +74,6 @@ const DEFAULT_SITE_CONTENT: SiteContent = {
   socialLinks: DEFAULT_SOCIAL_LINKS,
 };
 
-// Storage Cache Version for Clean Slate
-const CACHE_VERSION = 'spy_cms_clean_v7_zero_auto_inbox';
-try {
-  const currentVer = localStorage.getItem('spy_cms_cache_ver');
-  if (currentVer !== CACHE_VERSION) {
-    const legacyKeys = [
-      'complaints',
-      'complaint_list',
-      'demo_complaints',
-      'support_requests',
-      'spy_cms_events',
-      'spy_cms_programs',
-      'spy_cms_team',
-      'spy_cms_partners',
-      'spy_cms_complaints',
-      'spy_cms_inbox',
-      'spy_cms_event_attendees',
-      'spy_cms_impact_stories',
-      'staff_list',
-      'spy_cms_site_content',
-    ];
-    legacyKeys.forEach((k) => {
-      try {
-        localStorage.removeItem(k);
-      } catch (e) {}
-    });
-    localStorage.setItem('spy_cms_cache_ver', CACHE_VERSION);
-  }
-} catch (e) {
-  console.warn('Cache busting check:', e);
-}
-
 interface CmsContextType {
   siteContent: SiteContent;
   events: EventItem[];
@@ -145,14 +96,14 @@ interface CmsContextType {
   isLoading: boolean;
   
   // Site Content Modifiers
-  updateHero: (data: Partial<SiteContent['hero']>) => void;
-  updateWhoWeAre: (data: Partial<SiteContent['whoWeAre']>) => void;
-  updateFocusAreas: (areas: FocusAreaItem[]) => void;
-  updateStats: (stats: StatItem[]) => void;
-  updateFeaturedEvent: (event: EventItem | null) => void;
-  updateCta: (data: Partial<SiteContent['cta']>) => void;
-  updateContactInfo: (data: Partial<SiteContent['contactInfo']>) => void;
-  updateSocialLinks: (data: Partial<SocialLinks>) => void;
+  updateHero: (data: Partial<SiteContent['hero']>) => Promise<void>;
+  updateWhoWeAre: (data: Partial<SiteContent['whoWeAre']>) => Promise<void>;
+  updateFocusAreas: (areas: FocusAreaItem[]) => Promise<void>;
+  updateStats: (stats: StatItem[]) => Promise<void>;
+  updateFeaturedEvent: (event: EventItem | null) => Promise<void>;
+  updateCta: (data: Partial<SiteContent['cta']>) => Promise<void>;
+  updateContactInfo: (data: Partial<SiteContent['contactInfo']>) => Promise<void>;
+  updateSocialLinks: (data: Partial<SocialLinks>) => Promise<void>;
   updateSystemSettings: (data: {
     siteName?: string;
     maintenanceMode?: boolean;
@@ -167,58 +118,58 @@ interface CmsContextType {
   }) => Promise<void>;
 
   // Event CRUD & Attendees
-  addEvent: (event: Omit<EventItem, 'id'>) => void;
-  updateEvent: (id: string, eventData: Partial<EventItem>) => void;
-  deleteEvent: (id: string) => void;
-  toggleFeaturedEvent: (id: string | null) => void;
-  addEventAttendee: (attendee: Omit<EventAttendee, 'id' | 'registrationDate'>) => void;
-  deleteEventAttendee: (id: string) => void;
+  addEvent: (event: Omit<EventItem, 'id'>) => Promise<EventItem>;
+  updateEvent: (id: string, eventData: Partial<EventItem>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  toggleFeaturedEvent: (id: string | null) => Promise<void>;
+  addEventAttendee: (attendee: Omit<EventAttendee, 'id' | 'registrationDate'>) => Promise<void>;
+  deleteEventAttendee: (id: string) => Promise<void>;
   getAttendeesForEvent: (eventId: string) => EventAttendee[];
 
   // Program CRUD
-  addProgram: (program: Omit<ProgramItem, 'id'>) => void;
-  updateProgram: (id: string, programData: Partial<ProgramItem>) => void;
-  deleteProgram: (id: string) => void;
+  addProgram: (program: Omit<ProgramItem, 'id'>) => Promise<void>;
+  updateProgram: (id: string, programData: Partial<ProgramItem>) => Promise<void>;
+  deleteProgram: (id: string) => Promise<void>;
 
   // Team CRUD & Category Management
   teamCategories: string[];
   addTeamCategory: (category: string) => Promise<void>;
   deleteTeamCategory: (category: string) => Promise<void>;
   updateTeamCategories: (categories: string[]) => Promise<void>;
-  addTeamMember: (member: Omit<TeamMember, 'id'>) => void;
-  updateTeamMember: (id: string, memberData: Partial<TeamMember>) => void;
-  deleteTeamMember: (id: string) => void;
+  addTeamMember: (member: Omit<TeamMember, 'id'>) => Promise<void>;
+  updateTeamMember: (id: string, memberData: Partial<TeamMember>) => Promise<void>;
+  deleteTeamMember: (id: string) => Promise<void>;
 
   // Partner CRUD
-  addPartner: (partner: PartnerLogo) => void;
-  updatePartner: (oldName: string, partner: PartnerLogo) => void;
-  deletePartner: (name: string) => void;
+  addPartner: (partner: PartnerLogo) => Promise<void>;
+  updatePartner: (oldName: string, partner: PartnerLogo) => Promise<void>;
+  deletePartner: (name: string) => Promise<void>;
 
   // Complaint CRUD & Actions
-  addComplaint: (complaint: Omit<ComplaintItem, 'id' | 'dateSubmitted' | 'status'>) => void;
-  updateComplaintStatus: (id: string, status: 'Pending' | 'In Review' | 'Resolved') => void;
-  updateComplaintNotes: (id: string, notes: string) => void;
-  deleteComplaint: (id: string) => void;
+  addComplaint: (complaint: Omit<ComplaintItem, 'id' | 'dateSubmitted' | 'status'>) => Promise<void>;
+  updateComplaintStatus: (id: string, status: 'Pending' | 'In Review' | 'Resolved') => Promise<void>;
+  updateComplaintNotes: (id: string, notes: string) => Promise<void>;
+  deleteComplaint: (id: string) => Promise<void>;
   clearAllComplaints: () => Promise<void>;
 
   // Inbox CRUD & Actions
-  addInboxItem: (item: Omit<InboxItem, 'id' | 'dateSubmitted' | 'status'> & { id?: string; dateSubmitted?: string; status?: InboxItem['status'] }) => void;
-  updateInboxStatus: (id: string, status: InboxItem['status']) => void;
-  updateInboxNotes: (id: string, notes: string) => void;
-  deleteInboxItem: (id: string) => void;
+  addInboxItem: (item: Omit<InboxItem, 'id' | 'dateSubmitted' | 'status'> & { id?: string; dateSubmitted?: string; status?: InboxItem['status'] }) => Promise<void>;
+  updateInboxStatus: (id: string, status: InboxItem['status']) => Promise<void>;
+  updateInboxNotes: (id: string, notes: string) => Promise<void>;
+  deleteInboxItem: (id: string) => Promise<void>;
   clearAllInboxItems: () => Promise<void>;
 
   // Impact Stories CRUD
-  addImpactStory: (story: Omit<ImpactStory, 'id'>) => void;
-  updateImpactStory: (id: string, storyData: Partial<ImpactStory>) => void;
-  deleteImpactStory: (id: string) => void;
+  addImpactStory: (story: Omit<ImpactStory, 'id'>) => Promise<void>;
+  updateImpactStory: (id: string, storyData: Partial<ImpactStory>) => Promise<void>;
+  deleteImpactStory: (id: string) => Promise<void>;
 
   // Authentication & User Accounts (RBAC)
-  loginUser: (email: string, password?: string) => { success: boolean; message?: string; user?: UserAccount };
-  registerUser: (name: string, email: string, password?: string) => { success: boolean; message?: string; user?: UserAccount };
-  logoutUser: () => void;
-  updateUserRole: (userId: string, newRole: UserRole) => void;
-  deleteUserAccount: (userId: string) => void;
+  loginUser: (email: string, password?: string) => Promise<{ success: boolean; message?: string; user?: UserAccount }>;
+  registerUser: (name: string, email: string, password?: string, initialRole?: UserRole) => Promise<{ success: boolean; message?: string; user?: UserAccount }>;
+  logoutUser: () => Promise<void>;
+  updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
+  deleteUserAccount: (userId: string) => Promise<void>;
 
   // Utilities
   resetToDefaults: () => void;
@@ -358,20 +309,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [users, setUsers] = useState<UserAccount[]>(() => {
     try {
-      const saved = localStorage.getItem('spy_cms_users') || localStorage.getItem('staff_list');
+      const saved = localStorage.getItem('spy_cms_users');
       if (saved) {
         const parsed: UserAccount[] = JSON.parse(saved);
-        const legacyEmails = [
-          'admin@spybangladesh.org',
-          'tanvir@spybangladesh.org',
-          'nusrat@spybangladesh.org',
-          'rafiq@gmail.com',
-          'sadia.r@yahoo.com',
-        ];
-        const cleaned = parsed.filter(
-          (u) => Boolean(u && u.email && !legacyEmails.includes(u.email.toLowerCase()))
-        );
-        return cleaned;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.error(e);
@@ -389,18 +330,6 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  useEffect(() => {
-    try {
-      if (currentUser) {
-        localStorage.setItem('spy_cms_current_user', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('spy_cms_current_user');
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [currentUser]);
-
   const [approvedAdminEmails, setApprovedAdminEmails] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('spy_cms_approved_admins');
@@ -412,240 +341,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
-
   const [visitorCount] = useState<number>(14850);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    // Instant hydration - no artificial setTimeout delays
-    setIsLoading(false);
-  }, []);
-
-  // Sync to local storage & Firestore Realtime Sync
-  useEffect(() => {
-    if (!db) {
-      setIsLoading(false);
-      return;
-    }
-
-    const unsubInbox = onSnapshot(collection(db, 'inbox'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as InboxItem[];
-        setInboxItems(items);
-        safeLocalStorageSet('spy_cms_inbox', JSON.stringify(items));
-      } else {
-        setInboxItems([]);
-        safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore inbox listener notice:', err));
-
-    const unsubComplaints = onSnapshot(collection(db, 'complaints'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ComplaintItem[];
-        setComplaints(items);
-        safeLocalStorageSet('spy_cms_complaints', JSON.stringify(items));
-      } else {
-        setComplaints([]);
-        safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore complaints listener notice:', err));
-
-    const unsubEvents = onSnapshot(collection(db, 'events'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventItem[];
-        setEvents(items);
-        safeLocalStorageSet('spy_cms_events', JSON.stringify(items));
-      } else {
-        setEvents([]);
-        safeLocalStorageSet('spy_cms_events', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore events listener notice:', err));
-
-    const unsubAttendees = onSnapshot(collection(db, 'event_attendees'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as EventAttendee[];
-        setEventAttendees(items);
-        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(items));
-      } else {
-        setEventAttendees([]);
-        safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore attendees listener notice:', err));
-
-    const unsubTeam = onSnapshot(collection(db, 'team'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as TeamMember[];
-        setTeamMembers(items);
-        safeLocalStorageSet('spy_cms_team', JSON.stringify(items));
-      } else {
-        setTeamMembers([]);
-        safeLocalStorageSet('spy_cms_team', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore team listener notice:', err));
-
-    const unsubPartners = onSnapshot(collection(db, 'partners'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as PartnerLogo[];
-        const unique = Array.from(new Map(items.map((it) => [it.name, it])).values());
-        setPartners(unique);
-        safeLocalStorageSet('spy_cms_partners', JSON.stringify(unique));
-      } else {
-        setPartners([]);
-        safeLocalStorageSet('spy_cms_partners', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore partners listener notice:', err));
-
-    const unsubPrograms = onSnapshot(collection(db, 'programs'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ProgramItem[];
-        setPrograms(items);
-        safeLocalStorageSet('spy_cms_programs', JSON.stringify(items));
-      } else {
-        setPrograms([]);
-        safeLocalStorageSet('spy_cms_programs', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore programs listener notice:', err));
-
-    const unsubImpact = onSnapshot(collection(db, 'impact_stories'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as ImpactStory[];
-        setImpactStories(items);
-        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(items));
-      } else {
-        setImpactStories([]);
-        safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore impact_stories listener notice:', err));
-
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      if (!snapshot.empty) {
-        const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as unknown as UserAccount[];
-        const unique = Array.from(new Map(items.map((it) => [it.id, it])).values());
-        setUsers(unique);
-        safeLocalStorageSet('spy_cms_users', JSON.stringify(unique));
-      } else {
-        setUsers([]);
-        safeLocalStorageSet('spy_cms_users', JSON.stringify([]));
-      }
-    }, (err) => console.warn('Firestore users listener notice:', err));
-
-    // Settings Listener (settings/general)
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSiteContent((prev) => ({
-          ...prev,
-          siteName: data.siteName || prev.siteName || "Survivor's Path Youth",
-          maintenanceMode: typeof data.maintenanceMode === 'boolean' ? data.maintenanceMode : prev.maintenanceMode,
-          contactInfo: {
-            ...prev.contactInfo,
-            ...(data.contactInfo || {}),
-            email: data.email || data.contactInfo?.email || prev.contactInfo.email,
-            phone: data.phone || data.contactInfo?.phone || prev.contactInfo.phone,
-            officeLocations: data.officeLocations || data.contactInfo?.officeLocations || prev.contactInfo.officeLocations,
-            footerAbout: data.footerAbout || data.contactInfo?.footerAbout || prev.contactInfo.footerAbout,
-          },
-          socialLinks: {
-            ...prev.socialLinks,
-            ...(data.socialLinks || {}),
-          },
-        }));
-      }
-    }, (err) => console.warn('Firestore settings listener notice:', err));
-
-    // Stats Listener (stats/impact)
-    const unsubStats = onSnapshot(doc(db, 'stats', 'impact'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.stats && Array.isArray(data.stats)) {
-          setSiteContent((prev) => ({
-            ...prev,
-            stats: data.stats,
-          }));
-        }
-      }
-    }, (err) => console.warn('Firestore stats listener notice:', err));
-
-    // Approved Admins Listener (settings/approved_admins)
-    const unsubApprovedAdmins = onSnapshot(doc(db, 'settings', 'approved_admins'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (Array.isArray(data.emails)) {
-          const cleanEmails = data.emails.map((e: string) => e.trim().toLowerCase());
-          setApprovedAdminEmails(cleanEmails);
-          safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(cleanEmails));
-        }
-      }
-    }, (err) => console.warn('Firestore approved_admins listener notice:', err));
-
-    // Content Manager Listener (content/homepage)
-    const unsubContent = onSnapshot(doc(db, 'content', 'homepage'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSiteContent((prev) => ({
-          ...prev,
-          hero: data.hero ? { ...prev.hero, ...data.hero } : prev.hero,
-          whoWeAre: data.whoWeAre ? { ...prev.whoWeAre, ...data.whoWeAre } : prev.whoWeAre,
-          cta: data.cta ? { ...prev.cta, ...data.cta } : prev.cta,
-          focusAreas: data.focusAreas ? data.focusAreas : prev.focusAreas,
-        }));
-      }
-    }, (err) => console.warn('Firestore content listener notice:', err));
-
-    // Team Categories Listener (settings/team_categories)
-    const unsubTeamCategories = onSnapshot(doc(db, 'settings', 'team_categories'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (Array.isArray(data.categories) && data.categories.length > 0) {
-          setTeamCategories(data.categories);
-          safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(data.categories));
-        }
-      }
-    }, (err) => console.warn('Firestore team_categories listener notice:', err));
-
-    return () => {
-      unsubInbox();
-      unsubComplaints();
-      unsubEvents();
-      unsubAttendees();
-      unsubTeam();
-      unsubTeamCategories();
-      unsubPartners();
-      unsubPrograms();
-      unsubImpact();
-      unsubUsers();
-      unsubSettings();
-      unsubStats();
-      unsubApprovedAdmins();
-      unsubContent();
-    };
-  }, []);
-
-  // Firebase Auth State Observer
-  useEffect(() => {
-    if (!auth) return;
-    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email) {
-        const email = firebaseUser.email.toLowerCase();
-        const found = users.find((u) => u.email.toLowerCase() === email);
-        if (found) {
-          setCurrentUser(found);
-        } else if (isSuperAdminEmail(email)) {
-          const superAdmin: UserAccount = {
-            id: firebaseUser.uid || `user-superadmin-${Date.now()}`,
-            name: firebaseUser.displayName || 'Md Anonto Sunny (Super Admin)',
-            email: email,
-            role: 'admin',
-            createdAt: new Date().toISOString(),
-          };
-          setCurrentUser(superAdmin);
-        }
-      }
-    });
-    return () => unsubAuth();
-  }, [users]);
-
+  // Sync to local storage for quick cache
   useEffect(() => {
     safeLocalStorageSet('spy_cms_siteContent', JSON.stringify(siteContent));
   }, [siteContent]);
@@ -694,22 +394,226 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
-  // Modifiers
+  // ============================================================================
+  // SUPABASE INITIAL LOAD & REALTIME SYNCHRONIZATION
+  // ============================================================================
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSupabaseData = async () => {
+      setIsLoading(true);
+      try {
+        // 1. Site Content & General Settings
+        const { data: contentData, error: contentErr } = await supabase
+          .from('site_content')
+          .select('*');
+        if (!contentErr && contentData && contentData.length > 0 && isMounted) {
+          const contentMap: any = {};
+          contentData.forEach((row) => {
+            contentMap[row.id] = row.data || row;
+          });
+          setSiteContent((prev) => ({
+            ...prev,
+            hero: contentMap['hero'] || prev.hero,
+            whoWeAre: contentMap['whoWeAre'] || prev.whoWeAre,
+            cta: contentMap['cta'] || prev.cta,
+            contactInfo: contentMap['contactInfo'] || prev.contactInfo,
+            socialLinks: contentMap['socialLinks'] || prev.socialLinks,
+            focusAreas: contentMap['focusAreas'] || prev.focusAreas,
+            stats: contentMap['stats'] || prev.stats,
+            siteName: contentMap['general']?.siteName || prev.siteName,
+            maintenanceMode: contentMap['general']?.maintenanceMode ?? prev.maintenanceMode,
+          }));
+        }
+
+        // 2. Events
+        const { data: eventsData, error: eventsErr } = await supabase
+          .from('events')
+          .select('*')
+          .order('date', { ascending: false });
+        if (!eventsErr && eventsData && isMounted) {
+          setEvents(eventsData);
+        }
+
+        // 3. Event Attendees
+        const { data: attData, error: attErr } = await supabase
+          .from('event_attendees')
+          .select('*');
+        if (!attErr && attData && isMounted) {
+          setEventAttendees(attData);
+        }
+
+        // 4. Programs
+        const { data: progData, error: progErr } = await supabase
+          .from('programs')
+          .select('*')
+          .order('number', { ascending: true });
+        if (!progErr && progData && isMounted) {
+          setPrograms(progData);
+        }
+
+        // 5. Team Members
+        const { data: teamData, error: teamErr } = await supabase
+          .from('team_members')
+          .select('*')
+          .order('order_index', { ascending: true });
+        if (!teamErr && teamData && isMounted) {
+          setTeamMembers(teamData);
+        }
+
+        // 6. Partners
+        const { data: partnersData, error: partnersErr } = await supabase
+          .from('partners')
+          .select('*');
+        if (!partnersErr && partnersData && isMounted) {
+          setPartners(partnersData);
+        }
+
+        // 7. Complaints
+        const { data: compData, error: compErr } = await supabase
+          .from('complaints')
+          .select('*')
+          .order('dateSubmitted', { ascending: false });
+        if (!compErr && compData && isMounted) {
+          setComplaints(compData);
+        }
+
+        // 8. Inbox Items
+        const { data: inbData, error: inbErr } = await supabase
+          .from('inbox')
+          .select('*')
+          .order('dateSubmitted', { ascending: false });
+        if (!inbErr && inbData && isMounted) {
+          setInboxItems(inbData);
+        }
+
+        // 9. Impact Stories
+        const { data: storiesData, error: storiesErr } = await supabase
+          .from('impact_stories')
+          .select('*');
+        if (!storiesErr && storiesData && isMounted) {
+          setImpactStories(storiesData);
+        }
+
+        // 10. Users
+        const { data: usersData, error: usersErr } = await supabase
+          .from('users')
+          .select('*');
+        if (!usersErr && usersData && isMounted) {
+          setUsers(usersData);
+        }
+
+        // 11. System Settings / Team Categories / Approved Admins
+        const { data: settingsData, error: settingsErr } = await supabase
+          .from('system_settings')
+          .select('*');
+        if (!settingsErr && settingsData && isMounted) {
+          const settingsMap: any = {};
+          settingsData.forEach((row) => {
+            settingsMap[row.id] = row.data || row;
+          });
+          if (settingsMap['team_categories']?.categories) {
+            setTeamCategories(settingsMap['team_categories'].categories);
+          }
+          if (settingsMap['approved_admins']?.emails) {
+            setApprovedAdminEmails(settingsMap['approved_admins'].emails);
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase initial fetch notice (using local state fallback):', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchSupabaseData();
+
+    // Supabase Realtime Channel
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setEvents((prev) => [payload.new as EventItem, ...prev.filter((e) => e.id !== payload.new.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setEvents((prev) => prev.map((e) => (e.id === payload.new.id ? (payload.new as EventItem) : e)));
+          } else if (payload.eventType === 'DELETE') {
+            setEvents((prev) => prev.filter((e) => e.id !== payload.old.id));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'complaints' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setComplaints((prev) => [payload.new as ComplaintItem, ...prev.filter((c) => c.id !== payload.new.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setComplaints((prev) => prev.map((c) => (c.id === payload.new.id ? (payload.new as ComplaintItem) : c)));
+          } else if (payload.eventType === 'DELETE') {
+            setComplaints((prev) => prev.filter((c) => c.id !== payload.old.id));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inbox' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setInboxItems((prev) => [payload.new as InboxItem, ...prev.filter((i) => i.id !== payload.new.id)]);
+          } else if (payload.eventType === 'UPDATE') {
+            setInboxItems((prev) => prev.map((i) => (i.id === payload.new.id ? (payload.new as InboxItem) : i)));
+          } else if (payload.eventType === 'DELETE') {
+            setInboxItems((prev) => prev.filter((i) => i.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    // Supabase Auth State Observer
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user?.email) {
+          const cleanEmail = session.user.email.toLowerCase();
+          const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
+          if (found) {
+            setCurrentUser(found);
+          } else if (isSuperAdminEmail(cleanEmail)) {
+            const superAdmin: UserAccount = {
+              id: session.user.id || `user-superadmin-${Date.now()}`,
+              name: session.user.user_metadata?.name || 'Md Anonto Sunny (Super Admin)',
+              email: cleanEmail,
+              role: 'admin',
+              createdAt: new Date().toISOString(),
+            };
+            setCurrentUser(superAdmin);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Keep currentUser intact if logged in locally or reset if strictly signed out
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Site Content Modifiers
   const updateHero = async (data: Partial<SiteContent['hero']>) => {
     let updatedHero = siteContent.hero;
     setSiteContent((prev) => {
       updatedHero = { ...prev.hero, ...data };
       return { ...prev, hero: updatedHero };
     });
-    if (db) {
-      try {
-        await setDoc(doc(db, 'content', 'homepage'), {
-          hero: updatedHero,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateHero error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'hero', data: updatedHero });
+    } catch (e) {
+      console.warn('Supabase updateHero error:', e);
     }
   };
 
@@ -719,43 +623,28 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedWho = { ...prev.whoWeAre, ...data };
       return { ...prev, whoWeAre: updatedWho };
     });
-    if (db) {
-      try {
-        await setDoc(doc(db, 'content', 'homepage'), {
-          whoWeAre: updatedWho,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateWhoWeAre error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'whoWeAre', data: updatedWho });
+    } catch (e) {
+      console.warn('Supabase updateWhoWeAre error:', e);
     }
   };
 
   const updateFocusAreas = async (areas: FocusAreaItem[]) => {
     setSiteContent((prev) => ({ ...prev, focusAreas: areas }));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'content', 'homepage'), {
-          focusAreas: areas,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateFocusAreas error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'focusAreas', data: areas });
+    } catch (e) {
+      console.warn('Supabase updateFocusAreas error:', e);
     }
   };
 
   const updateStats = async (stats: StatItem[]) => {
     setSiteContent((prev) => ({ ...prev, stats: stats }));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'stats', 'impact'), {
-          stats: stats,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateStats error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'stats', data: stats });
+    } catch (e) {
+      console.warn('Supabase updateStats error:', e);
     }
   };
 
@@ -772,22 +661,13 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       setEvents((prev) => prev.map((e) => ({ ...e, isFeatured: false })));
     }
-    if (db) {
-      try {
-        await setDoc(
-          doc(db, 'content', 'homepage'),
-          {
-            featuredEvent: event,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-        if (event && event.id) {
-          await updateDoc(doc(db, 'events', event.id), { ...event, isFeatured: true });
-        }
-      } catch (e) {
-        console.error('Firestore updateFeaturedEvent error:', e);
+    try {
+      await supabase.from('site_content').upsert({ id: 'featuredEvent', data: event });
+      if (event?.id) {
+        await supabase.from('events').update({ isFeatured: true }).eq('id', event.id);
       }
+    } catch (e) {
+      console.warn('Supabase updateFeaturedEvent error:', e);
     }
   };
 
@@ -797,15 +677,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedCta = { ...prev.cta, ...data };
       return { ...prev, cta: updatedCta };
     });
-    if (db) {
-      try {
-        await setDoc(doc(db, 'content', 'homepage'), {
-          cta: updatedCta,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateCta error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'cta', data: updatedCta });
+    } catch (e) {
+      console.warn('Supabase updateCta error:', e);
     }
   };
 
@@ -815,19 +690,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedContact = { ...prev.contactInfo, ...data };
       return { ...prev, contactInfo: updatedContact };
     });
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'general'), {
-          contactInfo: updatedContact,
-          email: updatedContact.email,
-          phone: updatedContact.phone,
-          officeLocations: updatedContact.officeLocations,
-          footerAbout: updatedContact.footerAbout,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateContactInfo error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'contactInfo', data: updatedContact });
+    } catch (e) {
+      console.warn('Supabase updateContactInfo error:', e);
     }
   };
 
@@ -837,15 +703,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedSocial = { ...prev.socialLinks, ...data };
       return { ...prev, socialLinks: updatedSocial };
     });
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'general'), {
-          socialLinks: updatedSocial,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateSocialLinks error:', e);
-      }
+    try {
+      await supabase.from('site_content').upsert({ id: 'socialLinks', data: updatedSocial });
+    } catch (e) {
+      console.warn('Supabase updateSocialLinks error:', e);
     }
   };
 
@@ -886,30 +747,27 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       socialLinks: updatedSocial,
     }));
 
-    const formData = {
-      siteName: updatedSiteName,
-      maintenanceMode: updatedMaintenanceMode,
-      contactInfo: updatedContact,
-      email: updatedContact.email,
-      phone: updatedContact.phone,
-      officeLocations: updatedContact.officeLocations,
-      footerAbout: updatedContact.footerAbout,
-      socialLinks: updatedSocial,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'general'), formData, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateSystemSettings error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({
+        id: 'general',
+        data: {
+          siteName: updatedSiteName,
+          maintenanceMode: updatedMaintenanceMode,
+          contactInfo: updatedContact,
+          socialLinks: updatedSocial,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    } catch (e) {
+      console.warn('Supabase updateSystemSettings error:', e);
     }
   };
 
   // Event CRUD
-  const addEvent = async (eventData: Omit<EventItem, 'id'>) => {
-    const payload = {
+  const addEvent = async (eventData: Omit<EventItem, 'id'>): Promise<EventItem> => {
+    const newId = `event-${Date.now()}`;
+    const payload: EventItem = {
+      id: newId,
       title: eventData.title || '',
       date: eventData.date || '',
       location: eventData.location || '',
@@ -930,25 +788,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         collectCustomQuestion: false,
         customQuestionPrompt: '',
       },
-      createdAt: new Date().toISOString(),
     };
 
-    if (db) {
-      try {
-        const docRef = await addDoc(collection(db, 'events'), payload);
-        const newEvent: EventItem = { ...payload, id: docRef.id };
-        setEvents((prev) => [newEvent, ...prev.filter((i) => i.id !== newEvent.id)]);
-        return newEvent;
-      } catch (e) {
-        console.error('Firestore addEvent error:', e);
-        throw e;
-      }
-    } else {
-      const newId = `event-${Date.now()}`;
-      const newEvent: EventItem = { ...payload, id: newId };
-      setEvents((prev) => [newEvent, ...prev]);
-      return newEvent;
+    setEvents((prev) => [payload, ...prev]);
+    try {
+      await supabase.from('events').insert([payload]);
+    } catch (e) {
+      console.warn('Supabase addEvent error:', e);
     }
+    return payload;
   };
 
   const updateEvent = async (id: string, eventData: Partial<EventItem>) => {
@@ -967,24 +815,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (siteContent.featuredEvent && siteContent.featuredEvent.id === id && updatedItem) {
       setSiteContent((prev) => ({ ...prev, featuredEvent: updatedItem! }));
-      if (db) {
-        try {
-          await setDoc(doc(db, 'content', 'homepage'), {
-            featuredEvent: updatedItem,
-            updatedAt: new Date().toISOString(),
-          }, { merge: true });
-        } catch (e) {
-          console.error('Firestore sync updateFeaturedEvent error:', e);
-        }
-      }
     }
-
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'events', id), eventData);
-      } catch (e) {
-        console.error('Firestore updateEvent error:', e);
-      }
+    try {
+      await supabase.from('events').update(eventData).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateEvent error:', e);
     }
   };
 
@@ -997,32 +832,18 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
 
-    // If deleting the currently featured event, auto-promote another event or clear featured
     if (siteContent.featuredEvent && siteContent.featuredEvent.id === id) {
       const nextFeatured = remainingEvents.find((e) => e.isFeatured) || remainingEvents[0] || null;
       if (nextFeatured) {
         updateFeaturedEvent(nextFeatured);
       } else {
         setSiteContent((prev) => ({ ...prev, featuredEvent: null }));
-        if (db) {
-          try {
-            await setDoc(doc(db, 'content', 'homepage'), {
-              featuredEvent: null,
-              updatedAt: new Date().toISOString(),
-            }, { merge: true });
-          } catch (e) {
-            console.error('Firestore clear featuredEvent error:', e);
-          }
-        }
       }
     }
-
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'events', id));
-      } catch (e) {
-        console.error('Firestore deleteEvent error:', e);
-      }
+    try {
+      await supabase.from('events').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteEvent error:', e);
     }
   };
 
@@ -1032,14 +853,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setEvents(updatedEvents);
       safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
       updateFeaturedEvent(null);
-      if (db) {
-        for (const e of updatedEvents) {
-          try {
-            await updateDoc(doc(db, 'events', e.id), { isFeatured: false });
-          } catch (err) {
-            console.error('Firestore unset isFeatured error:', err);
-          }
-        }
+      try {
+        await supabase.from('events').update({ isFeatured: false }).neq('id', '');
+      } catch (e) {
+        console.warn('Supabase toggleFeaturedEvent clear error:', e);
       }
       return;
     }
@@ -1048,23 +865,18 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!target) return;
 
     if (target.isFeatured) {
-      // Toggle off!
       const updatedEvents = events.map((e) =>
         e.id === id ? { ...e, isFeatured: false } : e
       );
       setEvents(updatedEvents);
       safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
       updateFeaturedEvent(null);
-
-      if (db) {
-        try {
-          await updateDoc(doc(db, 'events', id), { isFeatured: false });
-        } catch (err) {
-          console.error('Firestore toggleOff error:', err);
-        }
+      try {
+        await supabase.from('events').update({ isFeatured: false }).eq('id', id);
+      } catch (e) {
+        console.warn('Supabase toggleFeaturedEvent off error:', e);
       }
     } else {
-      // Set as featured
       const updatedEvents = events.map((e) => ({
         ...e,
         isFeatured: e.id === id,
@@ -1073,15 +885,11 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_events', JSON.stringify(updatedEvents));
       const newFeatured = { ...target, isFeatured: true };
       updateFeaturedEvent(newFeatured);
-
-      if (db) {
-        for (const e of updatedEvents) {
-          try {
-            await updateDoc(doc(db, 'events', e.id), { isFeatured: e.isFeatured });
-          } catch (err) {
-            console.error('Firestore toggleFeaturedEvent doc update error:', err);
-          }
-        }
+      try {
+        await supabase.from('events').update({ isFeatured: false }).neq('id', id);
+        await supabase.from('events').update({ isFeatured: true }).eq('id', id);
+      } catch (e) {
+        console.warn('Supabase toggleFeaturedEvent on error:', e);
       }
     }
   };
@@ -1096,12 +904,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...attendeeData,
     };
     setEventAttendees((prev) => [newAttendee, ...prev]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'event_attendees', newAttendee.id), newAttendee);
-      } catch (e) {
-        console.error('Firestore addEventAttendee error:', e);
-      }
+    try {
+      await supabase.from('event_attendees').insert([newAttendee]);
+    } catch (e) {
+      console.warn('Supabase addEventAttendee error:', e);
     }
   };
 
@@ -1111,17 +917,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_event_attendees', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'event_attendees', id));
-      } catch (e) {
-        console.error('Firestore deleteEventAttendee error:', e);
-      }
+    try {
+      await supabase.from('event_attendees').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteEventAttendee error:', e);
     }
   };
 
   const getAttendeesForEvent = (eventId: string) => {
-    return eventAttendees.filter((a) => a.eventId === eventId);
+    return (eventAttendees || []).filter((a) => a?.eventId === eventId);
   };
 
   // Program CRUD
@@ -1133,12 +937,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       number: programs.length + 1,
     };
     setPrograms((prev) => [...prev, newProgram]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'programs', newProgram.id), newProgram);
-      } catch (e) {
-        console.error('Firestore addProgram error:', e);
-      }
+    try {
+      await supabase.from('programs').insert([newProgram]);
+    } catch (e) {
+      console.warn('Supabase addProgram error:', e);
     }
   };
 
@@ -1146,27 +948,23 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPrograms((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...progData } : item))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'programs', id), progData);
-      } catch (e) {
-        console.error('Firestore updateProgram error:', e);
-      }
+    try {
+      await supabase.from('programs').update(progData).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateProgram error:', e);
     }
   };
 
   const deleteProgram = async (id: string) => {
     setPrograms((prev) => {
       const updated = prev.filter((item) => item.id !== id);
-      try { localStorage.setItem('spy_cms_programs', JSON.stringify(updated)); } catch (e) {}
+      safeLocalStorageSet('spy_cms_programs', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'programs', id));
-      } catch (e) {
-        console.error('Firestore deleteProgram error:', e);
-      }
+    try {
+      await supabase.from('programs').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteProgram error:', e);
     }
   };
 
@@ -1179,12 +977,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = [...teamCategories, clean];
     setTeamCategories(updated);
     safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(updated));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
-      } catch (e) {
-        console.error('Firestore addTeamCategory error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({ id: 'team_categories', data: { categories: updated } });
+    } catch (e) {
+      console.warn('Supabase addTeamCategory error:', e);
     }
   };
 
@@ -1193,12 +989,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updated = teamCategories.filter((cat) => cat.toLowerCase() !== clean);
     setTeamCategories(updated);
     safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(updated));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'team_categories'), { categories: updated }, { merge: true });
-      } catch (e) {
-        console.error('Firestore deleteTeamCategory error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({ id: 'team_categories', data: { categories: updated } });
+    } catch (e) {
+      console.warn('Supabase deleteTeamCategory error:', e);
     }
   };
 
@@ -1206,12 +1000,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanList = newCategories.map((c) => c.trim()).filter(Boolean);
     setTeamCategories(cleanList);
     safeLocalStorageSet('spy_cms_team_categories', JSON.stringify(cleanList));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'team_categories'), { categories: cleanList }, { merge: true });
-      } catch (e) {
-        console.error('Firestore updateTeamCategories error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({ id: 'team_categories', data: { categories: cleanList } });
+    } catch (e) {
+      console.warn('Supabase updateTeamCategories error:', e);
     }
   };
 
@@ -1219,12 +1011,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newId = `team-${Date.now()}`;
     const newMember: TeamMember = { ...memberData, id: newId };
     setTeamMembers((prev) => [...prev, newMember]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'team', newMember.id), newMember);
-      } catch (e) {
-        console.error('Firestore addTeamMember error:', e);
-      }
+    try {
+      await supabase.from('team_members').insert([newMember]);
+    } catch (e) {
+      console.warn('Supabase addTeamMember error:', e);
     }
   };
 
@@ -1232,12 +1022,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTeamMembers((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...memberData } : item))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'team', id), memberData);
-      } catch (e) {
-        console.error('Firestore updateTeamMember error:', e);
-      }
+    try {
+      await supabase.from('team_members').update(memberData).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateTeamMember error:', e);
     }
   };
 
@@ -1247,41 +1035,29 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_team', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'team', id));
-      } catch (e) {
-        console.error('Firestore deleteTeamMember error:', e);
-      }
+    try {
+      await supabase.from('team_members').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteTeamMember error:', e);
     }
   };
 
   // Partner CRUD
   const addPartner = async (partner: PartnerLogo) => {
     setPartners((prev) => [...prev, partner]);
-    if (db) {
-      try {
-        const partnerId = partner.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        await setDoc(doc(db, 'partners', partnerId), partner);
-      } catch (e) {
-        console.error('Firestore addPartner error:', e);
-      }
+    try {
+      await supabase.from('partners').insert([partner]);
+    } catch (e) {
+      console.warn('Supabase addPartner error:', e);
     }
   };
 
   const updatePartner = async (oldName: string, partner: PartnerLogo) => {
     setPartners((prev) => prev.map((p) => (p.name === oldName ? partner : p)));
-    if (db) {
-      try {
-        const oldId = oldName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const newId = partner.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        if (oldId !== newId) {
-          await deleteDoc(doc(db, 'partners', oldId));
-        }
-        await setDoc(doc(db, 'partners', newId), partner);
-      } catch (e) {
-        console.error('Firestore updatePartner error:', e);
-      }
+    try {
+      await supabase.from('partners').update(partner).eq('name', oldName);
+    } catch (e) {
+      console.warn('Supabase updatePartner error:', e);
     }
   };
 
@@ -1291,13 +1067,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_partners', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        const partnerId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        await deleteDoc(doc(db, 'partners', partnerId));
-      } catch (e) {
-        console.error('Firestore deletePartner error:', e);
-      }
+    try {
+      await supabase.from('partners').delete().eq('name', name);
+    } catch (e) {
+      console.warn('Supabase deletePartner error:', e);
     }
   };
 
@@ -1313,12 +1086,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       urgencyLevel: complaintData.urgencyLevel || 'Standard',
     };
     setComplaints((prev) => [newComplaint, ...prev]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'complaints', newComplaint.id), newComplaint);
-      } catch (e) {
-        console.error('Firestore addComplaint error:', e);
-      }
+    try {
+      await supabase.from('complaints').insert([newComplaint]);
+    } catch (e) {
+      console.warn('Supabase addComplaint error:', e);
     }
   };
 
@@ -1326,12 +1097,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setComplaints((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status } : c))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'complaints', id), { status });
-      } catch (e) {
-        console.error('Firestore updateComplaintStatus error:', e);
-      }
+    try {
+      await supabase.from('complaints').update({ status }).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateComplaintStatus error:', e);
     }
   };
 
@@ -1339,12 +1108,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setComplaints((prev) =>
       prev.map((c) => (c.id === id ? { ...c, adminNotes: notes } : c))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'complaints', id), { adminNotes: notes });
-      } catch (e) {
-        console.error('Firestore updateComplaintNotes error:', e);
-      }
+    try {
+      await supabase.from('complaints').update({ adminNotes: notes }).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateComplaintNotes error:', e);
     }
   };
 
@@ -1354,27 +1121,20 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_complaints', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'complaints', id));
-      } catch (e) {
-        console.error('Firestore deleteComplaint error:', e);
-      }
+    try {
+      await supabase.from('complaints').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteComplaint error:', e);
     }
   };
 
   const clearAllComplaints = async () => {
     setComplaints([]);
     safeLocalStorageSet('spy_cms_complaints', JSON.stringify([]));
-    if (db) {
-      try {
-        const snap = await getDocs(collection(db, 'complaints'));
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-      } catch (e) {
-        console.error('Firestore clearAllComplaints error:', e);
-      }
+    try {
+      await supabase.from('complaints').delete().neq('id', '');
+    } catch (e) {
+      console.warn('Supabase clearAllComplaints error:', e);
     }
   };
 
@@ -1395,12 +1155,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...item,
     };
     setInboxItems((prev) => [newInbox, ...prev]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'inbox', newInbox.id), newInbox);
-      } catch (e) {
-        console.error('Firestore addInboxItem error:', e);
-      }
+    try {
+      await supabase.from('inbox').insert([newInbox]);
+    } catch (e) {
+      console.warn('Supabase addInboxItem error:', e);
     }
   };
 
@@ -1408,12 +1166,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setInboxItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'inbox', id), { status });
-      } catch (e) {
-        console.error('Firestore updateInboxStatus error:', e);
-      }
+    try {
+      await supabase.from('inbox').update({ status }).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateInboxStatus error:', e);
     }
   };
 
@@ -1421,12 +1177,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setInboxItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, adminNotes: notes } : item))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'inbox', id), { adminNotes: notes });
-      } catch (e) {
-        console.error('Firestore updateInboxNotes error:', e);
-      }
+    try {
+      await supabase.from('inbox').update({ adminNotes: notes }).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateInboxNotes error:', e);
     }
   };
 
@@ -1436,27 +1190,20 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_inbox', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'inbox', id));
-      } catch (e) {
-        console.error('Firestore deleteInboxItem error:', e);
-      }
+    try {
+      await supabase.from('inbox').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteInboxItem error:', e);
     }
   };
 
   const clearAllInboxItems = async () => {
     setInboxItems([]);
     safeLocalStorageSet('spy_cms_inbox', JSON.stringify([]));
-    if (db) {
-      try {
-        const snap = await getDocs(collection(db, 'inbox'));
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-      } catch (e) {
-        console.error('Firestore clearAllInboxItems error:', e);
-      }
+    try {
+      await supabase.from('inbox').delete().neq('id', '');
+    } catch (e) {
+      console.warn('Supabase clearAllInboxItems error:', e);
     }
   };
 
@@ -1465,12 +1212,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newId = `story-${Date.now()}`;
     const newStory: ImpactStory = { ...storyData, id: newId };
     setImpactStories((prev) => [newStory, ...prev]);
-    if (db) {
-      try {
-        await setDoc(doc(db, 'impact_stories', newStory.id), newStory);
-      } catch (e) {
-        console.error('Firestore addImpactStory error:', e);
-      }
+    try {
+      await supabase.from('impact_stories').insert([newStory]);
+    } catch (e) {
+      console.warn('Supabase addImpactStory error:', e);
     }
   };
 
@@ -1478,12 +1223,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImpactStories((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...storyData } : item))
     );
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'impact_stories', id), storyData);
-      } catch (e) {
-        console.error('Firestore updateImpactStory error:', e);
-      }
+    try {
+      await supabase.from('impact_stories').update(storyData).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateImpactStory error:', e);
     }
   };
 
@@ -1493,12 +1236,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       safeLocalStorageSet('spy_cms_impact_stories', JSON.stringify(updated));
       return updated;
     });
-    if (db) {
-      try {
-        await deleteDoc(doc(db, 'impact_stories', id));
-      } catch (e) {
-        console.error('Firestore deleteImpactStory error:', e);
-      }
+    try {
+      await supabase.from('impact_stories').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteImpactStory error:', e);
     }
   };
 
@@ -1508,23 +1249,36 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Auth & RBAC Methods
-  const loginUser = (email: string, password?: string) => {
+  const loginUser = async (email: string, password?: string): Promise<{ success: boolean; message?: string; user?: UserAccount }> => {
     const cleanEmail = email.trim().toLowerCase();
     const isSuper = isSuperAdminEmail(cleanEmail);
 
     let foundUser = users.find((u) => u.email.toLowerCase() === cleanEmail);
 
-    // Try Firebase Auth in background
-    if (auth && password) {
-      signInWithEmailAndPassword(auth, cleanEmail, password).catch((authErr) => {
-        console.warn('Firebase Auth signin notice:', authErr?.message || authErr);
-        if (authErr?.code === 'auth/user-not-found' || authErr?.code === 'auth/invalid-credential') {
-          createUserWithEmailAndPassword(auth, cleanEmail, password).catch(() => {});
+    // Try Supabase Auth
+    if (password) {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: password,
+        });
+        if (!authError && authData?.user) {
+          if (!foundUser) {
+            foundUser = {
+              id: authData.user.id,
+              name: authData.user.user_metadata?.name || (isSuper ? 'Md Anonto Sunny (Super Admin)' : 'Staff Member'),
+              email: cleanEmail,
+              role: isSuper ? 'admin' : (authData.user.user_metadata?.role || 'user'),
+              createdAt: new Date().toISOString(),
+            };
+          }
         }
-      });
+      } catch (err) {
+        console.warn('Supabase auth sign in error:', err);
+      }
     }
 
-    // Auto-create Super Admin if attempting login for the first time
+    // Auto-create Super Admin
     if (!foundUser && isSuper) {
       const superAdminUser: UserAccount = {
         id: `user-superadmin-${Date.now()}`,
@@ -1536,8 +1290,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       setUsers((prev) => [...prev, superAdminUser]);
       setCurrentUser(superAdminUser);
-      if (db) {
-        setDoc(doc(db, 'users', superAdminUser.id), superAdminUser).catch((e) => console.error(e));
+      try {
+        await supabase.from('users').upsert(superAdminUser);
+      } catch (e) {
+        console.warn('Supabase superadmin sync error:', e);
       }
       return { success: true, user: superAdminUser };
     }
@@ -1550,21 +1306,20 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Incorrect password. Please try again.' };
     }
 
-    // Hardcoded Super Admin Override: Ensure role is permanently 'admin'
     if (isSuper && foundUser.role !== 'admin') {
       const updatedSuperUser = { ...foundUser, role: 'admin' as UserRole };
       setUsers((prev) => prev.map((u) => (u.id === foundUser!.id ? updatedSuperUser : u)));
       foundUser = updatedSuperUser;
-      if (db) {
-        setDoc(doc(db, 'users', updatedSuperUser.id), updatedSuperUser).catch((e) => console.error(e));
-      }
+      try {
+        await supabase.from('users').upsert(updatedSuperUser);
+      } catch (e) {}
     }
 
     setCurrentUser(foundUser);
     return { success: true, user: foundUser };
   };
 
-  const registerUser = (name: string, email: string, password?: string, initialRole?: UserRole) => {
+  const registerUser = async (name: string, email: string, password?: string, initialRole?: UserRole): Promise<{ success: boolean; message?: string; user?: UserAccount }> => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
     if (!cleanName || !cleanEmail) {
@@ -1575,18 +1330,34 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'An account with this email address already exists.' };
     }
 
-    if (auth && password) {
-      createUserWithEmailAndPassword(auth, cleanEmail, password).catch((e) => {
-        console.warn('Firebase Auth register notice:', e?.message || e);
-      });
-    }
-
-    // Hardcoded Super Admin Check: mdanontosunny1068@mail.com gets 'admin', all others default to 'user'
     const isSuper = isSuperAdminEmail(cleanEmail);
     const assignedRole: UserRole = isSuper ? 'admin' : (initialRole || 'user');
 
+    let newUserId = `user-${Date.now()}`;
+
+    // Try Supabase Auth Sign Up
+    if (password) {
+      try {
+        const { data: authData } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: password,
+          options: {
+            data: {
+              name: cleanName,
+              role: assignedRole,
+            },
+          },
+        });
+        if (authData?.user?.id) {
+          newUserId = authData.user.id;
+        }
+      } catch (err) {
+        console.warn('Supabase auth sign up error:', err);
+      }
+    }
+
     const newUser: UserAccount = {
-      id: `user-${Date.now()}`,
+      id: newUserId,
       name: cleanName,
       email: cleanEmail,
       role: assignedRole,
@@ -1597,17 +1368,21 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers((prev) => [...prev, newUser]);
     setCurrentUser(newUser);
 
-    if (db) {
-      setDoc(doc(db, 'users', newUser.id), newUser).catch((e) => console.error(e));
+    try {
+      await supabase.from('users').upsert(newUser);
+    } catch (e) {
+      console.warn('Supabase registerUser insert error:', e);
     }
 
     return { success: true, user: newUser };
   };
 
-  const logoutUser = () => {
+  const logoutUser = async () => {
     setCurrentUser(null);
-    if (auth) {
-      signOut(auth).catch((e) => console.error(e));
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Supabase signOut notice:', e);
     }
   };
 
@@ -1618,21 +1393,15 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (currentUser && currentUser.id === userId) {
       setCurrentUser((prev) => (prev ? { ...prev, role: newRole } : null));
     }
-    if (db) {
-      try {
-        await updateDoc(doc(db, 'users', userId), { role: newRole });
-      } catch (e) {
-        console.error('Firestore updateUserRole error:', e);
-      }
+    try {
+      await supabase.from('users').update({ role: newRole }).eq('id', userId);
+    } catch (e) {
+      console.warn('Supabase updateUserRole error:', e);
     }
   };
 
   const deleteUserAccount = async (userIdOrEmail: string) => {
     const cleanTarget = userIdOrEmail.trim().toLowerCase();
-    const targetUser = users.find(
-      (u) => u.id === userIdOrEmail || u.email.trim().toLowerCase() === cleanTarget
-    );
-
     setUsers((prev) => {
       const updated = prev.filter(
         (u) =>
@@ -1643,20 +1412,18 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return updated;
     });
 
-    if (targetUser && db) {
-      try {
-        await deleteDoc(doc(db, 'users', targetUser.id));
-      } catch (e) {
-        console.error('Firestore deleteUserAccount error:', e);
-      }
-    }
-
     if (
       currentUser &&
       (currentUser.id === userIdOrEmail ||
         (currentUser.email && currentUser.email.trim().toLowerCase() === cleanTarget))
     ) {
       logoutUser();
+    }
+
+    try {
+      await supabase.from('users').delete().or(`id.eq.${userIdOrEmail},email.eq.${cleanTarget}`);
+    } catch (e) {
+      console.warn('Supabase deleteUserAccount error:', e);
     }
   };
 
@@ -1668,12 +1435,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newList = [...approvedAdminEmails, clean];
     setApprovedAdminEmails(newList);
     safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(newList));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'approved_admins'), { emails: newList }, { merge: true });
-      } catch (e) {
-        console.error('Firestore addApprovedAdminEmail error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({ id: 'approved_admins', data: { emails: newList } });
+    } catch (e) {
+      console.warn('Supabase addApprovedAdminEmail error:', e);
     }
   };
 
@@ -1682,12 +1447,10 @@ export const CmsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newList = approvedAdminEmails.filter((e) => String(e || '').trim().toLowerCase() !== clean);
     setApprovedAdminEmails(newList);
     safeLocalStorageSet('spy_cms_approved_admins', JSON.stringify(newList));
-    if (db) {
-      try {
-        await setDoc(doc(db, 'settings', 'approved_admins'), { emails: newList }, { merge: true });
-      } catch (e) {
-        console.error('Firestore removeApprovedAdminEmail error:', e);
-      }
+    try {
+      await supabase.from('system_settings').upsert({ id: 'approved_admins', data: { emails: newList } });
+    } catch (e) {
+      console.warn('Supabase removeApprovedAdminEmail error:', e);
     }
   };
 
